@@ -388,9 +388,9 @@
       <p class="question">2. When?</p>
       <div class="dates">
         <label>From<input type="date" id="startInput"
-               onchange="state.startDate = this.value; refreshContinue(); save();"></label>
+               onchange="setStartDate(this.value)"></label>
         <label>To<input type="date" id="endInput"
-               onchange="state.endDate = this.value; refreshContinue(); save();"></label>
+               onchange="setEndDate(this.value)"></label>
       </div>
     </div>
 
@@ -975,6 +975,38 @@
     const end   = new Date(state.endDate);
     const ms    = end - start;                       // difference in milliseconds
     return Math.max(1, Math.round(ms / 86400000));   // 86,400,000 ms = one day
+  }
+
+  // Today's date as "YYYY-MM-DD" in the user's own timezone (not UTC).
+  function todayISO() {
+    const d = new Date();
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 10);
+  }
+
+  // Apply the earliest-allowed dates to the pickers: From ≥ today, To ≥ From.
+  function applyDateLimits() {
+    const today = todayISO();
+    const startEl = document.getElementById("startInput");
+    const endEl   = document.getElementById("endInput");
+    if (startEl) startEl.min = today;
+    if (endEl)   endEl.min   = state.startDate || today;
+  }
+
+  function setStartDate(v) {
+    state.startDate = v;
+    // the "To" date can't be before the "From" date
+    const endEl = document.getElementById("endInput");
+    if (endEl) endEl.min = v || todayISO();
+    if (state.endDate && v && state.endDate < v) {
+      state.endDate = "";                 // clear a now-invalid end date
+      if (endEl) endEl.value = "";
+    }
+    refreshContinue(); save();
+  }
+  function setEndDate(v) {
+    state.endDate = v;
+    refreshContinue(); save();
   }
 
   // Turn the two ISO dates into a friendly range, e.g. "10 – 17 Jun 2026".
@@ -1642,6 +1674,7 @@
     document.getElementById("destInput").value  = state.destination || "";
     document.getElementById("startInput").value = state.startDate || "";
     document.getElementById("endInput").value   = state.endDate || "";
+    applyDateLimits();
     refreshContinue();
   }
 
@@ -1960,6 +1993,7 @@
   document.getElementById("destInput").value  = state.destination || "";
   document.getElementById("startInput").value = state.startDate || "";
   document.getElementById("endInput").value   = state.endDate || "";
+  applyDateLimits();
   refreshContinue();
   renderSavedTrips();
   render();
