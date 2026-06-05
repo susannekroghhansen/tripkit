@@ -209,12 +209,28 @@
   .counter button:active { background: var(--teal); color: #fff; border-color: var(--teal); }
   .count-n { min-width: 18px; text-align: center; font-weight: 600; font-size: 0.95rem; }
 
-  .sec-del {
+  .sec-save {
     margin-left: auto; flex-shrink: 0;
+    border: 1px solid var(--line); background: var(--card); cursor: pointer;
+    color: var(--teal); font-family: 'DM Sans', sans-serif; font-size: 0.72rem; font-weight: 600;
+    padding: 4px 11px; border-radius: 999px;
+  }
+  .sec-save:active { background: var(--teal); color: #fff; border-color: var(--teal); }
+  .sec-del {
+    flex-shrink: 0;
     border: none; background: none; cursor: pointer;
     color: #BBC6C0; font-size: 0.95rem; padding: 4px 6px; border-radius: 8px;
   }
   .sec-del:active { color: var(--coral); }
+  /* transient confirmation toast */
+  .toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px);
+    background: var(--ink); color: #fff; padding: 12px 18px; border-radius: 999px;
+    font-size: 0.9rem; box-shadow: 0 8px 24px rgba(23, 58, 68, .3);
+    opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease;
+    z-index: 9500; max-width: 90%; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .item-del {
     margin-left: auto; flex-shrink: 0;
     border: none; background: none; cursor: pointer;
@@ -275,6 +291,11 @@
 
   /* save trip vs start-new: two clearly separate actions */
   .block-label { font-weight: 600; color: var(--ink); font-size: 0.95rem; margin: 18px 0 8px; }
+  .setup-block { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .setup-block .block-label { margin-top: 0; }
+  .wardrobe-actions { display: flex; flex-direction: column; gap: 10px; }
+  .wardrobe-actions .btn-secondary { width: 100%; }
+  .wardrobe-actions .adder { margin: 0; }
   .newtrip-block { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
   .btn-secondary {
     width: 100%; padding: 13px; border-radius: 14px; cursor: pointer;
@@ -302,9 +323,12 @@
   .mini.danger:active { background: var(--coral); color: #fff; border-color: var(--coral); }
   .save-row { margin-top: 18px; }
   .picker { margin-top: 14px; }
-  .picker select {
+  .picker select, .adder select {
     flex: 1; padding: 11px 12px; border: 1px solid var(--line); border-radius: 13px;
     background: var(--sand-2); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--ink);
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%237C8A8D' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat: no-repeat; background-position: right 13px center; padding-right: 34px;
   }
   .draft { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .draft .chip { cursor: pointer; }
@@ -515,6 +539,16 @@
       </div>
     </div>
 
+    <!-- save these answers as a named trip to reopen later -->
+    <div class="save-block">
+      <p class="block-label">Name &amp; save this trip <span class="optional">(optional)</span></p>
+      <div class="adder save-row">
+        <input id="tripNameInput" placeholder="Name this trip…">
+        <button onclick="saveTripFromInput()">Save trip</button>
+      </div>
+      <p id="saveMsg" class="status"></p>
+    </div>
+
     <!-- This button stays disabled until ALL questions are answered -->
     <button class="btn" id="continueBtn" onclick="goToPlanner()" disabled>Continue →</button>
 
@@ -529,21 +563,25 @@
     <div class="panel">
       <div id="tripSummary" class="summary"></div>
       <div id="includePicker"></div>
-      <button class="btn" style="margin-top:18px;" id="buildBtn" onclick="buildList()">Build my list ✨</button>
-      <p id="status" class="status"></p>
 
-      <!-- drop a pre-prepared list into this trip -->
-      <div id="templatePicker" class="picker"></div>
-
-      <!-- save this whole trip to reopen later -->
-      <div class="save-block">
-        <p class="block-label">Save this trip</p>
-        <div class="adder save-row">
-          <input id="tripNameInput" placeholder="Name this trip…">
-          <button onclick="saveTripFromInput()">Save trip</button>
-        </div>
-        <p id="saveMsg" class="status"></p>
+      <!-- drop a saved list into this trip -->
+      <div class="setup-block">
+        <p class="block-label">Add a saved list</p>
+        <div id="templatePicker" class="picker"></div>
       </div>
+
+      <!-- wardrobe is opt-in: generate a capsule, or bring your own saved list -->
+      <div class="setup-block">
+        <p class="block-label">Wardrobe</p>
+        <p class="hint">Clothes aren't added automatically. Generate a capsule sized to your trip, or add one of your saved lists.</p>
+        <div class="wardrobe-actions">
+          <button class="btn-secondary" onclick="generateWardrobe()">Generate wardrobe ✨</button>
+          <div id="wardrobeListPicker"></div>
+        </div>
+      </div>
+
+      <button class="btn" style="margin-top:20px;" id="buildBtn" onclick="buildList()">Build my list ✨</button>
+      <p id="status" class="status"></p>
 
       <div class="newtrip-block">
         <button class="btn-secondary" onclick="newTrip()">Start a new trip</button>
@@ -812,6 +850,7 @@
       tripTypes:      [],     // question — one OR MORE kinds of trip
       stay:           null,   // question 4 — where you're staying
       eco:            false,  // opt-in sustainability tips (off by default)
+      wantWardrobe:   false,  // clothes are opt-in: generate or add from a list
       themes:         [],     // free-text occasions/themes (honeymoon, festival…)
       activities:     [],     // question 3 — free text
       destination:    "",     // question 4 — free text
@@ -855,6 +894,10 @@
   state.themes         = state.themes           || [];
   if (state.stay === undefined) state.stay = null;
   state.eco            = state.eco             || false;
+  // clothes are now opt-in; keep wardrobe ON for trips that already had one
+  if (state.wantWardrobe === undefined)
+    state.wantWardrobe = (state.sections || []).includes("Wardrobe")
+                      || (state.items || []).some(i => i.category === "Wardrobe");
   // older trips stored a single `transport`; turn it into a list
   state.transports     = state.transports || (state.transport ? [state.transport] : []);
   // older trips stored a single `tripType`; turn it into a list
@@ -889,20 +932,89 @@
     document.getElementById("lists").classList.add("hidden");
     document.getElementById("coach").classList.add("hidden");
     document.getElementById("planner").classList.remove("hidden");
-    // fill in the little trip summary at the top of the planner
-    document.getElementById("tripSummary").innerHTML =
-      `<strong>${escapeHtml(state.destination)}</strong>
+    renderRecap();
+    fillTemplatePicker();
+    fillWardrobeListPicker();
+    renderIncludePicker();
+  }
+  /* ---- The read-only recap of the user's choices, shown atop the planner ---- */
+  function renderRecap() {
+    const el = document.getElementById("tripSummary");
+    if (!el) return;
+    const pill = txt => `<span class="trip-pill">${escapeHtml(txt)}</span>`;
+    const extra = [];
+    if (state.travelStyle) extra.push(pill(state.travelStyle));
+    if (state.stay) extra.push(pill(state.stay));
+    (state.tripTypes || []).forEach(t => extra.push(pill(t)));
+    (state.activities || []).forEach(a => extra.push(pill(a)));
+    (state.themes || []).forEach(t => extra.push(pill(t)));
+    (state.transports || []).forEach(t => extra.push(pill(t)));
+    (state.bags || []).forEach(b => extra.push(pill(b)));
+    if ((state.pets || []).length) extra.push(pill(state.pets.length > 1 ? state.pets.length + " pets" : "1 pet"));
+    if (state.laundry) extra.push(pill("laundry available"));
+    el.innerHTML =
+      `<strong>${escapeHtml(state.destination || "")}</strong>
        <div class="trip-meta">
          <span class="trip-pill">
            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>
            ${formatTripDates()}
          </span>
          <span class="trip-pill">${nightsFromDates()} nights</span>
+         ${extra.join("")}
        </div>`;
-    document.getElementById("saveMsg").textContent = "";
-    fillTemplatePicker();
-    renderIncludePicker();
   }
+
+  /* ---- Wardrobe (opt-in) ---- */
+  // Generate a capsule sized to the trip, then offer the Coach for personalising.
+  async function generateWardrobe() {
+    state.wantWardrobe = true;
+    save();
+    await buildList();   // builds the capsule into Wardrobe + Outer wear
+    if (confirm("Wardrobe added ✨\n\nWould you like to add your own items and fine-tune it in the Capsule Coach?")) {
+      goToCoach();
+    }
+  }
+  // Populate the "add wardrobe from a saved list" control.
+  function fillWardrobeListPicker() {
+    const box = document.getElementById("wardrobeListPicker");
+    if (!box) return;
+    if (!templates.length) {
+      box.innerHTML = `<p class="hint" style="margin:4px 0 0;">No saved lists yet — make one in “My saved lists”, or save a section as a list.</p>`;
+      return;
+    }
+    const opts = templates.map((t, i) => `<option value="${i}">${escapeHtml(t.name)}</option>`).join("");
+    box.innerHTML =
+      `<div class="adder"><select id="wardrobeSelect">${opts}</select>
+         <button onclick="addWardrobeFromList()">Add from list</button></div>`;
+  }
+  function addWardrobeFromList() {
+    const sel = document.getElementById("wardrobeSelect");
+    if (!sel) return;
+    const t = templates[+sel.value];
+    if (!t) return;
+    if (!state.sections.includes("Wardrobe")) state.sections.push("Wardrobe");
+    if (!state.customSections.includes("Wardrobe")) state.customSections.push("Wardrobe");
+    t.items.forEach(name => addItem("Wardrobe", name));   // addItem saves + re-renders
+    toast(`Added “${t.name}” to your wardrobe.`);
+  }
+
+  /* ---- Medicine reminder: a prompt to CHECK the rules, never a ruling ----
+     Shown under any section the user names "Medicine". Rules depend on your
+     nationality and the specific medicine, so we only say "check". */
+  const STRICT_MEDS = {
+    "JP": "Japan", "AE": "the UAE", "SG": "Singapore", "QA": "Qatar", "ID": "Indonesia",
+    "CN": "China", "SA": "Saudi Arabia", "TH": "Thailand", "KR": "South Korea", "RU": "Russia",
+  };
+  function medicineReminder() {
+    let msg = "Reminder: carry medicines in their original packaging with a copy of your prescription. "
+            + "Some countries need a doctor's letter or a permit for certain medicines (even common ones) — "
+            + "check your destination's official rules before you travel.";
+    if (state.countryCode && STRICT_MEDS[state.countryCode]) {
+      msg += ` ${STRICT_MEDS[state.countryCode]} is known to be strict — check its official guidance.`;
+    }
+    return msg;
+  }
+
   function goToWelcome() {
     document.getElementById("planner").classList.add("hidden");
     document.getElementById("lists").classList.add("hidden");
@@ -1377,7 +1489,10 @@
     const list = ["Travel Documents", "Toiletries"];
     if (state.stay && staySetup[state.stay] && staySetup[state.stay].add.length) list.push("For your stay");
     if (family) state.people.forEach(p => list.push(p.name));   // a section per person
-    else        list.push("Underwear & Socks", "Wardrobe");
+    else {
+      list.push("Underwear & Socks");                  // daily essentials always
+      if (state.wantWardrobe) list.push("Wardrobe");   // clothes are opt-in now
+    }
     list.push("Entertainment");
     if ((state.pets || []).length) list.push("Pets");
     list.push("Devices & Chargers");
@@ -1387,7 +1502,7 @@
     if ((state.themes || []).length) list.push("Occasions / Themes");
     if (state.transports.length) list.push("Travel day items");
     list.push("Weather Gear");
-    if (!family) list.push("Outer wear");   // for a family, each person's section holds their layers
+    if (!family && state.wantWardrobe) list.push("Outer wear");   // part of the clothing capsule
     return list;
   }
 
@@ -1654,13 +1769,20 @@
       const inCat = state.items.filter(i => i.category === cat);
       const allPacked = inCat.length > 0 && inCat.every(i => i.packed);
       const badge = allPacked ? `<span class="badge">Packed ✓</span>` : "";
+      const saveBtn = inCat.length
+        ? `<button class="sec-save" onclick="event.stopPropagation(); saveSectionAsList(${sIndex})" title="Save this section as a reusable list">Save as list</button>`
+        : "";
 
       html += `<div class="cat ${allPacked ? 'done' : ''}">
           <span class="cat-name">${escapeHtml(cat)}</span>${badge}
+          ${saveBtn}
           <button class="sec-del" onclick="deleteSection(${sIndex})" title="Delete section">✕</button>
         </div>`;
       // optional guidance note for this section (e.g. the capsule tip)
       if (state.notes[cat]) html += `<p class="tip">${escapeHtml(state.notes[cat])}</p>`;
+      // a "check the rules" reminder under any Medicine section
+      if (/medicin|medication|\bmeds\b|prescription|pills/i.test(cat))
+        html += `<p class="tip">${escapeHtml(medicineReminder())}</p>`;
       html += `<ul class="dnd" data-section-index="${sIndex}">`;
       inCat.forEach(item => {
         html += `<li class="${item.packed ? 'done' : ''}" data-id="${item.id}" onclick="togglePacked(${item.id})">
@@ -1761,9 +1883,9 @@
     overlay.id = "celebrateOverlay";
     overlay.innerHTML =
       `<div class="celebrate-card" role="dialog" aria-modal="true" aria-label="All packed">
-         <h2 class="celebrate-title">You are ready</h2>
-         <p class="celebrate-sub">Towel? Check. Everything else? Check. Don't panic … you are ready to go.</p>
-         <button class="btn celebrate-btn" type="button">Let's go</button>
+         <h2 class="celebrate-title">Congratulations!</h2>
+         <p class="celebrate-sub">Towel? Check. Everything else? Check. Don't panic</p>
+         <button class="btn celebrate-btn" type="button">All packed &amp; Ready to go</button>
        </div>`;
     document.body.appendChild(overlay);
     overlay.querySelector(".celebrate-btn").addEventListener("click", closeCelebration);
@@ -1969,6 +2091,9 @@
     state.themes     = state.themes     || [];
     if (state.stay === undefined) state.stay = null;
     state.eco        = state.eco        || false;
+    if (state.wantWardrobe === undefined)
+      state.wantWardrobe = (state.sections || []).includes("Wardrobe")
+                        || (state.items || []).some(i => i.category === "Wardrobe");
     normalizeItems();
     save();
     syncWelcomeUI();    // make the question screen match the loaded trip
@@ -2295,6 +2420,36 @@
     if (sug.length)  html += `<p class="coach-h">You could</p><ul class="coach-list">${sug.map(s => `<li>${s}</li>`).join("")}</ul>`;
     else             html += `<p class="coach-h">You could</p><ul class="coach-list"><li>Honestly, this is a tidy little capsule — nothing I'd change.</li></ul>`;
     results.innerHTML = html + `</div>`;
+  }
+
+  /* ---- A small, self-dismissing confirmation toast ---- */
+  function toast(msg) {
+    let el = document.getElementById("toast");
+    if (!el) { el = document.createElement("div"); el.id = "toast"; el.className = "toast"; document.body.appendChild(el); }
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove("show"), 2200);
+  }
+
+  /* ---- Save one section's items as a reusable list (template) ----
+     Build up a section (e.g. add your own personal items) and keep it for next
+     time. It joins the same "saved lists" you can drop into any trip. */
+  function saveSectionAsList(sIndex) {
+    const cat = state.sections[sIndex];
+    const names = state.items.filter(i => i.category === cat).map(i => i.name);
+    if (!names.length) { toast("Nothing to save in this section yet."); return; }
+    let name = prompt(`Save "${cat}" as a reusable list. Name it:`, cat);
+    if (name === null) return;                 // cancelled
+    name = name.trim() || cat;
+    const record = { name, items: names };
+    const existing = templates.findIndex(t => t.name === name);
+    if (existing >= 0) templates[existing] = record;   // same name → overwrite
+    else templates.push(record);
+    saveJSON("packster_templates", templates);
+    fillTemplatePicker();                      // refresh the planner dropdowns
+    if (document.getElementById("wardrobeListPicker")) fillWardrobeListPicker();
+    toast(`Saved "${name}" to your lists.`);
   }
 
   // Save the coached wardrobe straight into "My saved lists"
