@@ -379,7 +379,23 @@
     <div id="savedTripsPanel"></div>
 
     <div class="panel">
-      <p class="question">1. How do you prefer to travel?</p>
+      <p class="question">1. Where are you going?</p>
+      <input class="text-input" id="destInput" placeholder="e.g. Lisbon"
+             oninput="state.destination = this.value.trim(); refreshContinue(); save();">
+    </div>
+
+    <div class="panel">
+      <p class="question">2. When?</p>
+      <div class="dates">
+        <label>From<input type="date" id="startInput"
+               onchange="state.startDate = this.value; refreshContinue(); save();"></label>
+        <label>To<input type="date" id="endInput"
+               onchange="state.endDate = this.value; refreshContinue(); save();"></label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="question">3. How do you prefer to travel?</p>
       <div class="chips" id="styleChips"></div>
       <div id="familyParty" class="hidden">
         <p class="sub-q">Who are you packing for? Each person gets their own section.</p>
@@ -392,34 +408,18 @@
     </div>
 
     <div class="panel">
-      <p class="question">2. What kind of trip?</p>
+      <p class="question">4. What kind of trip?</p>
       <div class="chips" id="typeChips"></div>
     </div>
 
     <div class="panel">
-      <p class="question">3. What do you plan to do there?</p>
+      <p class="question">5. What will you do there?</p>
       <p class="hint">Add your own activities — we'll suggest gear where we can.</p>
       <div id="activityTags" class="draft"></div>
       <div class="adder" style="margin-top:12px;">
         <input id="activityInput" placeholder="e.g. snorkelling, a run, a fancy dinner"
                onkeydown="if(event.key==='Enter') addActivity()">
         <button onclick="addActivity()">+</button>
-      </div>
-    </div>
-
-    <div class="panel">
-      <p class="question">4. Where are you going?</p>
-      <input class="text-input" id="destInput" placeholder="e.g. Lisbon"
-             oninput="state.destination = this.value.trim(); refreshContinue(); save();">
-    </div>
-
-    <div class="panel">
-      <p class="question">5. When?</p>
-      <div class="dates">
-        <label>From<input type="date" id="startInput"
-               onchange="state.startDate = this.value; refreshContinue(); save();"></label>
-        <label>To<input type="date" id="endInput"
-               onchange="state.endDate = this.value; refreshContinue(); save();"></label>
       </div>
     </div>
 
