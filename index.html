@@ -293,6 +293,14 @@
   .block-label { font-weight: 600; color: var(--ink); font-size: 0.95rem; margin: 18px 0 8px; }
   .setup-block { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
   .setup-block .block-label { margin-top: 0; }
+  .block-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .block-head .block-label { margin: 0; }
+  .link-mini {
+    background: none; border: none; cursor: pointer; flex: none;
+    color: var(--teal); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 600;
+    padding: 2px 0;
+  }
+  .link-mini:active { color: var(--teal-bright); }
   .wardrobe-actions { display: flex; flex-direction: column; gap: 10px; }
   .wardrobe-actions .btn-secondary { width: 100%; }
   .wardrobe-actions .adder { margin: 0; }
@@ -566,13 +574,19 @@
 
       <!-- drop a saved list into this trip -->
       <div class="setup-block">
-        <p class="block-label">Add a saved list</p>
+        <div class="block-head">
+          <p class="block-label">Add a saved list</p>
+          <button class="link-mini" onclick="goToLists()">+ New list</button>
+        </div>
         <div id="templatePicker" class="picker"></div>
       </div>
 
       <!-- wardrobe is opt-in: generate a capsule, or bring your own saved list -->
       <div class="setup-block">
-        <p class="block-label">Wardrobe</p>
+        <div class="block-head">
+          <p class="block-label">Wardrobe</p>
+          <button class="link-mini" onclick="goToCoach()">+ New capsule</button>
+        </div>
         <p class="hint">Clothes aren't added automatically. Generate a capsule sized to your trip, or add one of your saved lists.</p>
         <div class="wardrobe-actions">
           <button class="btn-secondary" onclick="generateWardrobe()">Generate wardrobe ✨</button>
@@ -595,7 +609,7 @@
 
   <!-- ============ SCREEN 3: MANAGE PRE-PREPARED LISTS ============ -->
   <div class="view hidden" id="lists">
-    <button class="editlink" onclick="goToWelcome()">← Back</button>
+    <button class="editlink" onclick="goBackFromSub()">← Back</button>
     <h2 class="screen-title">Saved lists</h2>
     <p class="hint">Build a list once, then drop it into any trip from the planner.</p>
 
@@ -617,7 +631,7 @@
 
   <!-- ============ SCREEN 4: CAPSULE COACH ============ -->
   <div class="view hidden" id="coach">
-    <button class="editlink" onclick="goToWelcome()">← Back</button>
+    <button class="editlink" onclick="goBackFromSub()">← Back</button>
     <h2 class="screen-title">Capsule coach</h2>
     <p class="hint">Add the clothes you're thinking of bringing. The coach suggests how to make them go further — keep what works, trim what fights. Set each item's type if the guess is wrong.</p>
 
@@ -664,6 +678,11 @@
       { name: "Deodorant", qty: "fixed" },
       { name: "Shampoo", qty: "fixed" },
       { name: "Skincare", qty: "fixed" },
+    ],
+    "Medicine": [
+      { name: "Any prescription medication", qty: "fixed" },
+      { name: "Pain relief", qty: "fixed" },
+      { name: "Plasters / blister care", qty: "fixed" },
     ],
     "Devices & Chargers": [
       { name: "Phone", qty: "fixed" },
@@ -927,16 +946,23 @@
   }
 
   /* ---- Switching between the screens ---- */
+  // Tracks whether we're in the plan-and-create flow, so sub-screens (saved
+  // lists, capsule coach) know to return to the planner rather than the welcome.
+  let plannerActive = false;
+
   function goToPlanner() {
     document.getElementById("welcome").classList.add("hidden");
     document.getElementById("lists").classList.add("hidden");
     document.getElementById("coach").classList.add("hidden");
     document.getElementById("planner").classList.remove("hidden");
+    plannerActive = true;
     renderRecap();
     fillTemplatePicker();
     fillWardrobeListPicker();
     renderIncludePicker();
   }
+  // Back from a sub-screen: return to wherever the user came from.
+  function goBackFromSub() { plannerActive ? goToPlanner() : goToWelcome(); }
   /* ---- The read-only recap of the user's choices, shown atop the planner ---- */
   function renderRecap() {
     const el = document.getElementById("tripSummary");
@@ -1020,6 +1046,7 @@
     document.getElementById("lists").classList.add("hidden");
     document.getElementById("coach").classList.add("hidden");
     document.getElementById("welcome").classList.remove("hidden");
+    plannerActive = false;
     renderSavedTrips();
   }
   function goToLists() {
@@ -1486,7 +1513,7 @@
      toggles read the same list, so order and toggles always agree. */
   function tripSections() {
     const family = isFamilyParty();
-    const list = ["Travel Documents", "Toiletries"];
+    const list = ["Travel Documents", "Toiletries", "Medicine"];
     if (state.stay && staySetup[state.stay] && staySetup[state.stay].add.length) list.push("For your stay");
     if (family) state.people.forEach(p => list.push(p.name));   // a section per person
     else {
@@ -2254,7 +2281,7 @@
   /* ---- Dropping a pre-prepared list into the current trip ---- */
   function fillTemplatePicker() {
     const box = document.getElementById("templatePicker");
-    if (!templates.length) { box.innerHTML = ""; return; }
+    if (!templates.length) { box.innerHTML = `<p class="hint" style="margin:4px 0 0;">No saved lists yet — tap “+ New list” to make one.</p>`; return; }
     const opts = templates.map((t, i) => `<option value="${i}">${escapeHtml(t.name)}</option>`).join("");
     box.innerHTML = `<div class="adder">
         <select id="templateSelect">${opts}</select>
