@@ -1,0 +1,1982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Tripkit — Pack smart, travel light</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#138B93">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    /* Coastal palette drawn from the inspiration: sea, sky, coral, sand */
+    --sand:        #FBF4EC;
+    --sand-2:      #F3E8D6;
+    --card:        #FFFFFF;
+    --ink:         #173A44;
+    --muted:       #7C8A8D;
+    --coral:       #F0795B;
+    --coral-deep:  #E0604A;
+    --teal:        #138B93;
+    --teal-bright: #21B3BD;
+    --sky:         #2C9CD8;
+    --line:        #E9DCC6;
+    --radius:      20px;
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    margin: 0;
+    font-family: 'DM Sans', sans-serif;
+    background: var(--sand);
+    color: var(--ink);
+    background-image:
+      radial-gradient(1200px 620px at 10% -8%, rgba(33,179,189,0.18), transparent 60%),
+      radial-gradient(1000px 640px at 98% 106%, rgba(240,121,91,0.16), transparent 55%),
+      radial-gradient(700px 500px at 92% 4%, rgba(44,156,216,0.10), transparent 60%);
+    background-attachment: fixed;
+    padding: max(22px, env(safe-area-inset-top)) 18px 48px;
+  }
+
+  .wrap { max-width: 540px; margin: 0 auto; }
+
+  header { margin-bottom: 6px; }
+  header h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 2.7rem;
+    margin: 6px 0 2px;
+    letter-spacing: -0.6px;
+    line-height: 1.04;
+    background: linear-gradient(120deg, var(--teal) 0%, var(--sky) 70%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header p { color: var(--muted); margin: 0 0 22px; font-size: 1.02rem; }
+
+  /* A "view" is one screen. We show one at a time. */
+  .hidden { display: none; }
+  .view.hidden { display: none; }
+  .view { animation: fade .35s ease both; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: 0 14px 34px rgba(19, 80, 90, 0.07);
+    margin-bottom: 16px;
+  }
+
+  .question { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.25rem; margin: 0 0 12px; color: var(--ink); }
+
+  /* destination text box + date pickers + select */
+  .text-input {
+    width: 100%; padding: 13px 15px;
+    border: 1px solid var(--line); border-radius: 13px;
+    font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--ink);
+    background: var(--sand-2);
+  }
+  .text-input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(19,139,147,0.15); }
+  .dates { display: flex; gap: 12px; }
+  .dates label {
+    flex: 1; display: flex; flex-direction: column; gap: 6px;
+    font-weight: 600; font-size: 0.82rem; color: var(--muted); letter-spacing: 0.02em;
+  }
+  .dates input {
+    padding: 12px 14px; border: 1px solid var(--line); border-radius: 13px;
+    font-family: 'DM Sans', sans-serif; font-size: 1rem; color: var(--ink);
+    background: var(--sand-2);
+  }
+  .dates input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(19,139,147,0.15); }
+
+  .summary { font-size: 1.05rem; line-height: 1.5; }
+  .summary strong { font-family: 'Space Grotesk', sans-serif; font-size: 1.4rem; color: var(--teal); }
+  .status { margin: 14px 0 0; font-size: 0.92rem; color: var(--teal); min-height: 1.2em; font-weight: 500; }
+  .status.busy { color: var(--muted); }
+
+  /* small hint under a question */
+  .hint { color: var(--muted); font-size: 0.88rem; margin: -4px 0 12px; }
+
+  /* luggage capacity gauge */
+  .gauge {
+    margin: 0 0 20px; padding: 15px; border-radius: 16px;
+    background: linear-gradient(180deg, #F7FBFB, var(--sand-2));
+    border: 1px solid var(--line);
+  }
+  .gauge-top { display: flex; justify-content: space-between; gap: 10px; font-size: 0.86rem; font-weight: 600; margin-bottom: 9px; color: var(--ink); }
+  .gauge .bar > span { background: linear-gradient(90deg, var(--teal), var(--teal-bright)); }
+  .gauge small { display: block; margin-top: 8px; font-weight: 600; font-size: 0.82rem; }
+  .gauge.ok    small { color: var(--teal); }
+  .gauge.tight small { color: #B5740E; }
+  .gauge.tight .bar > span { background: linear-gradient(90deg, #E0A11B, #F0B83D); }
+  .gauge.over  { border-color: var(--coral); background: linear-gradient(180deg, #FDEEE8, #FBE3D9); }
+  .gauge.over  small { color: var(--coral-deep); }
+  .gauge.over  .bar > span { background: linear-gradient(90deg, var(--coral), var(--coral-deep)); }
+
+  /* guidance note under a section heading (the capsule tip) */
+  .tip { margin: 0 0 8px; font-size: 0.9rem; line-height: 1.5; color: var(--muted); font-style: italic; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+  .chip {
+    padding: 10px 16px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--sand-2);
+    color: var(--ink); font-size: 0.95rem; font-weight: 500;
+    transition: transform .12s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .chip:active { transform: scale(0.96); }
+  .chip.on {
+    background: linear-gradient(135deg, var(--teal), var(--teal-bright));
+    color: #fff; border-color: transparent;
+    box-shadow: 0 6px 16px rgba(19, 139, 147, 0.30);
+  }
+
+  .btn {
+    width: 100%; padding: 16px;
+    border: none; border-radius: var(--radius);
+    background: linear-gradient(135deg, var(--coral), var(--coral-deep)); color: #fff;
+    font-family: 'DM Sans', sans-serif; font-size: 1.05rem; font-weight: 600;
+    cursor: pointer; box-shadow: 0 10px 24px rgba(224, 96, 74, 0.32);
+    transition: transform .12s ease, box-shadow .15s ease;
+  }
+  .btn:active { transform: translateY(1px) scale(0.995); box-shadow: 0 6px 16px rgba(224,96,74,0.28); }
+  .btn:disabled { opacity: 0.4; cursor: default; box-shadow: none; }
+
+  .editlink {
+    background: none; border: none; color: var(--teal);
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; padding: 0; margin-bottom: 14px;
+  }
+
+  .progress-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .bar { flex: 1; height: 9px; background: #EAE0CE; border-radius: 999px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--teal), var(--teal-bright)); transition: width .35s ease; border-radius: 999px; }
+  .progress-wrap small { color: var(--muted); white-space: nowrap; font-weight: 600; }
+
+  .cat {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.18rem;
+    margin: 20px 0 8px; color: var(--teal);
+    display: flex; align-items: center; gap: 10px;
+    transition: color .25s ease;
+  }
+  .cat.done { color: var(--coral); }
+  .cat .cat-name { flex-shrink: 0; }
+  .cat .badge {
+    font-family: 'DM Sans', sans-serif; font-size: 0.66rem; font-weight: 700;
+    letter-spacing: .05em; text-transform: uppercase;
+    background: linear-gradient(135deg, var(--coral), var(--coral-deep)); color: #fff;
+    padding: 3px 10px; border-radius: 999px;
+    animation: pop .4s ease both;
+  }
+  @keyframes pop { 0% { transform: scale(0); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+
+  ul { list-style: none; padding: 0; margin: 0; }
+  li {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 4px; border-bottom: 1px solid var(--line);
+    cursor: pointer; animation: rise .35s ease both;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .box {
+    width: 24px; height: 24px; border-radius: 8px;
+    border: 2px solid #BFD0D2; flex-shrink: 0;
+    display: grid; place-items: center; color: #fff;
+    transition: background .15s ease, border-color .15s ease;
+  }
+  li.done .box { background: linear-gradient(135deg, var(--teal), var(--teal-bright)); border-color: var(--teal); }
+  li.done .label { color: var(--muted); text-decoration: line-through; }
+  .label { font-size: 1rem; flex: 1; }
+
+  /* per-item quantity stepper */
+  .counter { display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .counter button {
+    width: 28px; height: 28px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--sand-2); color: var(--ink);
+    font-size: 1rem; line-height: 1; cursor: pointer; padding: 0;
+  }
+  .counter button:active { background: var(--teal); color: #fff; border-color: var(--teal); }
+  .count-n { min-width: 18px; text-align: center; font-weight: 600; font-size: 0.95rem; }
+
+  .sec-del {
+    margin-left: auto; flex-shrink: 0;
+    border: none; background: none; cursor: pointer;
+    color: #BBC6C0; font-size: 0.95rem; padding: 4px 6px; border-radius: 8px;
+  }
+  .sec-del:active { color: var(--coral); }
+  .item-del {
+    margin-left: auto; flex-shrink: 0;
+    border: none; background: none; cursor: pointer;
+    color: #C4CEC8; font-size: 0.9rem; padding: 4px 8px; border-radius: 8px;
+  }
+  .item-del:active { color: var(--coral); }
+
+  /* drag-and-drop */
+  .drag-handle {
+    cursor: grab; color: #BCC8C2; font-size: 1.1rem; flex-shrink: 0;
+    padding: 0 2px; touch-action: none;
+    user-select: none; -webkit-user-select: none;
+  }
+  .drag-handle:active { cursor: grabbing; }
+  .sortable-ghost { opacity: 0.35; }
+  .sortable-chosen { background: var(--sand-2); border-radius: 12px; }
+  .sortable-drag { box-shadow: 0 10px 28px rgba(19,80,90,0.20); border-radius: 12px; }
+
+  /* the "add your own" input rows */
+  .adder { display: flex; gap: 8px; margin: 10px 0 4px; }
+  .adder input {
+    flex: 1; padding: 11px 14px;
+    border: 1px solid var(--line); border-radius: 13px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--ink);
+    background: var(--sand-2);
+  }
+  .adder input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(19,139,147,0.15); }
+  .adder button {
+    border: none; border-radius: 13px; padding: 0 16px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-bright)); color: #fff;
+    font-weight: 600; font-size: 1rem; cursor: pointer; white-space: nowrap;
+  }
+  .section-adder { margin-top: 22px; }
+  .section-adder button { background: linear-gradient(135deg, var(--coral), var(--coral-deep)); }
+
+  /* saving trips & managing lists */
+  .toolbar { display: flex; justify-content: flex-end; gap: 16px; margin-bottom: 12px; }
+  .link {
+    background: none; border: none; color: var(--teal);
+    font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .link svg { width: 18px; height: 18px; flex: none; }
+
+  /* trip dates shown as clean pills in the planner summary */
+  .trip-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .trip-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--sand-2); border: 1px solid var(--line); color: var(--ink);
+    border-radius: 999px; padding: 6px 13px; font-size: 0.9rem; font-weight: 500;
+  }
+  .trip-pill svg { width: 15px; height: 15px; color: var(--teal); }
+
+  /* per-bag size selector */
+  .bag-size { margin-top: 10px; }
+  .bag-size-label { display: block; font-size: 0.82rem; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  .chip.sm { padding: 7px 12px; font-size: 0.85rem; }
+
+  /* save trip vs start-new: two clearly separate actions */
+  .block-label { font-weight: 600; color: var(--ink); font-size: 0.95rem; margin: 18px 0 8px; }
+  .newtrip-block { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .btn-secondary {
+    width: 100%; padding: 13px; border-radius: 14px; cursor: pointer;
+    background: var(--card); border: 1.5px solid var(--teal); color: var(--teal);
+    font-family: 'DM Sans', sans-serif; font-size: 1rem; font-weight: 600;
+  }
+  .btn-secondary:active { background: var(--teal); color: #fff; }
+
+  .screen-title {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.9rem; margin: 6px 0 2px;
+    background: linear-gradient(120deg, var(--teal), var(--sky));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .saved-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; padding: 8px 0;
+  }
+  .mini {
+    border: 1px solid var(--line); background: var(--sand-2); color: var(--ink);
+    border-radius: 11px; padding: 7px 13px; font-size: 0.9rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; margin-left: 6px;
+  }
+  .mini:active { background: var(--teal); color: #fff; border-color: var(--teal); }
+  .mini.danger { color: var(--coral); border-color: #F2C9BB; }
+  .mini.danger:active { background: var(--coral); color: #fff; border-color: var(--coral); }
+  .save-row { margin-top: 18px; }
+  .picker { margin-top: 14px; }
+  .picker select {
+    flex: 1; padding: 11px 12px; border: 1px solid var(--line); border-radius: 13px;
+    background: var(--sand-2); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--ink);
+  }
+  .draft { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .draft .chip { cursor: pointer; }
+
+  .reset-link { display: block; margin: 20px auto 0; color: var(--muted); font-size: 0.85rem; }
+  .reset-link.armed { color: var(--coral); font-weight: 600; }
+
+  /* NEW: family people editor */
+  .optional { font-weight: 400; color: var(--muted); font-size: 0.85rem; }
+  .sub-q { font-weight: 600; color: var(--ink); margin: 14px 0 8px; font-size: 0.95rem; }
+  .person-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .person-name { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line);
+    border-radius: 12px; font: inherit; background: var(--sand); color: var(--ink); }
+  .person-kind { padding: 10px 8px; border: 1px solid var(--line); border-radius: 12px;
+    font: inherit; background: var(--card); color: var(--ink); }
+  .person-x { border: none; background: none; color: var(--muted); font-size: 1.1rem;
+    cursor: pointer; padding: 4px 6px; line-height: 1; }
+  .person-x:hover { color: var(--coral-deep); }
+  .person-add { display: flex; gap: 8px; margin-top: 4px; }
+
+  /* NEW: carry-on liquids warning */
+  .warn-banner {
+    background: linear-gradient(180deg, #FDEEE8, #FBE3D9);
+    border: 1px solid var(--coral); color: var(--coral-deep);
+    border-radius: 14px; padding: 12px 14px; margin: 0 0 16px;
+    font-size: 0.9rem; font-weight: 500; line-height: 1.45;
+  }
+
+  /* NEW: capsule coach */
+  .ward-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 4px; border-bottom: 1px solid var(--line);
+  }
+  .ward-name { flex: 1; font-size: 1rem; }
+  .ward-row select {
+    border: 1px solid var(--line); border-radius: 10px; padding: 7px 9px;
+    background: var(--sand-2); font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem; color: var(--ink); flex-shrink: 0;
+  }
+  .coach-h { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.05rem; margin: 16px 0 6px; color: var(--teal); }
+  .coach-h:first-child { margin-top: 4px; }
+  .coach-list { margin: 0; padding-left: 20px; }
+  .coach-list li {
+    display: list-item; padding: 5px 0; border: none; cursor: default;
+    animation: none; font-size: 0.97rem; line-height: 1.5; color: var(--ink);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Tripkit</h1>
+    <p>Pack smart, travel light.</p>
+  </header>
+
+  <!-- ============ SCREEN 1: THE WELCOME QUESTIONS ============ -->
+  <div class="view" id="welcome">
+
+    <div class="toolbar">
+      <button class="link" onclick="goToCoach()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.5" r="1.8"/><path d="M12 7.3c0 1.2 1 1.7 1 2.6"/><path d="M13 9.9 20 14.6a1 1 0 0 1-.6 1.8H4.6A1 1 0 0 1 4 14.6L11 9.9"/></svg>
+        Capsule coach
+      </button>
+      <button class="link" onclick="goToLists()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>
+        My saved lists
+      </button>
+    </div>
+
+    <!-- saved trips appear here (only when there are some) -->
+    <div id="savedTripsPanel"></div>
+
+    <div class="panel">
+      <p class="question">1. How do you prefer to travel?</p>
+      <div class="chips" id="styleChips"></div>
+      <div id="familyParty" class="hidden">
+        <p class="sub-q">Who are you packing for? Each person gets their own section.</p>
+        <div id="peopleList"></div>
+        <div class="person-add">
+          <button class="chip" onclick="addPerson('Adult')">＋ Adult</button>
+          <button class="chip" onclick="addPerson('Child')">＋ Child</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="question">2. What kind of trip?</p>
+      <div class="chips" id="typeChips"></div>
+    </div>
+
+    <div class="panel">
+      <p class="question">3. What do you plan to do there?</p>
+      <p class="hint">Add your own activities — we'll suggest gear where we can.</p>
+      <div id="activityTags" class="draft"></div>
+      <div class="adder" style="margin-top:12px;">
+        <input id="activityInput" placeholder="e.g. snorkelling, a run, a fancy dinner"
+               onkeydown="if(event.key==='Enter') addActivity()">
+        <button onclick="addActivity()">+</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="question">4. Where are you going?</p>
+      <input class="text-input" id="destInput" placeholder="e.g. Lisbon"
+             oninput="state.destination = this.value.trim(); refreshContinue(); save();">
+    </div>
+
+    <div class="panel">
+      <p class="question">5. When?</p>
+      <div class="dates">
+        <label>From<input type="date" id="startInput"
+               onchange="state.startDate = this.value; refreshContinue(); save();"></label>
+        <label>To<input type="date" id="endInput"
+               onchange="state.endDate = this.value; refreshContinue(); save();"></label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <p class="question">6. What are you packing into?</p>
+      <p class="hint">Pick one or more — we'll estimate whether it all fits.</p>
+      <div id="bagChips"></div>
+    </div>
+
+    <div class="panel">
+      <p class="question">7. How are you travelling there?</p>
+      <p class="hint">Pick all that apply — e.g. a flight, then a train.</p>
+      <div class="chips" id="transportChips"></div>
+    </div>
+
+    <div class="panel">
+      <p class="question">Travelling with pets? <span class="optional">(optional)</span></p>
+      <p class="hint">Add any pets coming along — they'll get their own packing section.</p>
+      <div id="petsList"></div>
+      <div class="person-add">
+        <button class="chip" onclick="addPet('Dog')">＋ Dog</button>
+        <button class="chip" onclick="addPet('Cat')">＋ Cat</button>
+        <button class="chip" onclick="addPet('Other')">＋ Other</button>
+      </div>
+    </div>
+
+    <!-- This button stays disabled until ALL questions are answered -->
+    <button class="btn" id="continueBtn" onclick="goToPlanner()" disabled>Continue →</button>
+
+    <button class="link reset-link" id="resetBtn" onclick="startFresh()">Start fresh</button>
+  </div>
+
+  <!-- ============ SCREEN 2: THE PLANNER + LIST ============ -->
+  <div class="view hidden" id="planner">
+
+    <button class="editlink" onclick="goToWelcome()">← Edit my answers</button>
+
+    <div class="panel">
+      <div id="tripSummary" class="summary"></div>
+      <div id="includePicker"></div>
+      <button class="btn" style="margin-top:18px;" id="buildBtn" onclick="buildList()">Build my list ✨</button>
+      <p id="status" class="status"></p>
+
+      <!-- drop a pre-prepared list into this trip -->
+      <div id="templatePicker" class="picker"></div>
+
+      <!-- save this whole trip to reopen later -->
+      <div class="save-block">
+        <p class="block-label">Save this trip</p>
+        <div class="adder save-row">
+          <input id="tripNameInput" placeholder="Name this trip…">
+          <button onclick="saveTripFromInput()">Save trip</button>
+        </div>
+        <p id="saveMsg" class="status"></p>
+      </div>
+
+      <div class="newtrip-block">
+        <button class="btn-secondary" onclick="newTrip()">Start a new trip</button>
+      </div>
+    </div>
+
+    <div class="panel" id="output">
+      <p style="color:var(--muted); text-align:center; padding:30px 0;">Your packing list will appear here.</p>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 3: MANAGE PRE-PREPARED LISTS ============ -->
+  <div class="view hidden" id="lists">
+    <button class="editlink" onclick="goToWelcome()">← Back</button>
+    <h2 class="screen-title">Saved lists</h2>
+    <p class="hint">Build a list once, then drop it into any trip from the planner.</p>
+
+    <div id="templatesPanel"></div>
+
+    <div class="panel">
+      <p class="question" id="listFormTitle">New list</p>
+      <input class="text-input" id="newListName" placeholder="List name, e.g. Toiletries">
+      <div id="draftItems" class="draft"></div>
+      <div class="adder" style="margin-top:12px;">
+        <input id="draftItemInput" placeholder="Add an item…"
+               onkeydown="if(event.key==='Enter') addDraftItem()">
+        <button onclick="addDraftItem()">+</button>
+      </div>
+      <button class="btn" id="saveListBtn" style="margin-top:16px;" onclick="saveTemplate()">Save this list</button>
+      <button class="link" id="cancelEditBtn" style="display:none; margin-top:8px;" onclick="cancelEdit()">Cancel edit</button>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 4: CAPSULE COACH ============ -->
+  <div class="view hidden" id="coach">
+    <button class="editlink" onclick="goToWelcome()">← Back</button>
+    <h2 class="screen-title">Capsule coach</h2>
+    <p class="hint">Add the clothes you're thinking of bringing. The coach suggests how to make them go further — keep what works, trim what fights. Set each item's type if the guess is wrong.</p>
+
+    <div class="panel">
+      <div id="wardItems"></div>
+      <div class="adder" style="margin-top:12px;">
+        <input id="wardInput" placeholder="e.g. white top, blue cardigan, jeans"
+               onkeydown="if(event.key==='Enter') addWard()">
+        <button onclick="addWard()">+</button>
+      </div>
+      <button class="btn" style="margin-top:16px;" onclick="evaluateWardrobe()">Evaluate my wardrobe ✨</button>
+    </div>
+
+    <div id="coachResults"></div>
+
+    <div class="panel" id="saveWardrobePanel" style="display:none;">
+      <p class="question">Save this as a list</p>
+      <p class="hint">Saves these items to "My saved lists" so you can drop them into any trip.</p>
+      <div class="adder">
+        <input id="wardListName" placeholder="List name, e.g. Summer capsule">
+        <button onclick="saveWardrobeAsList()">💾 Save</button>
+      </div>
+      <p id="wardSaveMsg" class="status"></p>
+    </div>
+  </div>
+
+</div>
+
+<!-- SortableJS: a small library that makes drag-and-drop work on touch screens too -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+<script>
+  /* ============ THE RULES (the "brain") ============ */
+
+  // Things EVERY trip needs, grouped into the fixed sections.
+  const baseItems = {
+    "Travel Documents": [
+      { name: "Passport / ID", qty: "fixed" },
+      { name: "Wallet & cards", qty: "fixed" },
+      { name: "Tickets & bookings", qty: "fixed" },
+    ],
+    "Toiletries": [
+      { name: "Toothbrush & toothpaste", qty: "fixed" },
+      { name: "Deodorant", qty: "fixed" },
+      { name: "Shampoo", qty: "fixed" },
+      { name: "Skincare", qty: "fixed" },
+    ],
+    "Devices & Chargers": [
+      { name: "Phone", qty: "fixed" },
+      { name: "Charger", qty: "fixed" },
+    ],
+    "Underwear & Socks": [
+      // tops/bottoms come from the Wardrobe (capsule); these you want daily
+      { name: "Underwear", qty: "perDay" },
+      { name: "Socks", qty: "perDay" },
+    ],
+    "Keeping busy": [
+      // light defaults for downtime — switch this section off and add a saved
+      // list instead (e.g. a "Knitting kit") when a hobby needs several items
+      { name: "Book or e-reader", qty: "fixed" },
+      { name: "Headphones", qty: "fixed" },
+    ],
+  };
+
+  // Entry authorisations some destinations require, keyed by ISO country code.
+  // These are REMINDERS to check — whether you actually need one depends on your
+  // nationality, so the wording says "check if required" rather than "you need this".
+  const entryDocs = {
+    "GB": "UK ETA (check if required)",
+    "US": "US ESTA (check if required)",
+    "CA": "Canada eTA (check if required)",
+    "AU": "Australia ETA (check if required)",
+    "NZ": "New Zealand NZeTA (check if required)",
+    "IN": "India e-Visa (check if required)",
+    "TR": "Türkiye e-Visa (check if required)",
+  };
+
+  // Plug type + mains voltage by destination country (a common-destinations
+  // subset — easy to extend). Used to remind about a travel adapter.
+  const plugInfo = {
+    "GB": "Type G, 230V", "IE": "Type G, 230V", "MT": "Type G, 230V", "CY": "Type G, 230V",
+    "SG": "Type G, 230V", "HK": "Type G, 220V", "AE": "Type G/C/D, 230V", "MY": "Type G, 240V",
+    "US": "Type A/B, 120V", "CA": "Type A/B, 120V", "MX": "Type A/B, 127V", "JP": "Type A/B, 100V",
+    "AU": "Type I, 230V", "NZ": "Type I, 230V", "CN": "Type A/I/C, 220V", "AR": "Type C/I, 220V",
+    "DK": "Type C/E/F/K, 230V", "DE": "Type C/F, 230V", "FR": "Type C/E, 230V", "ES": "Type C/F, 230V",
+    "PT": "Type C/F, 230V", "NL": "Type C/F, 230V", "BE": "Type C/E, 230V", "AT": "Type C/F, 230V",
+    "SE": "Type C/F, 230V", "NO": "Type C/F, 230V", "FI": "Type C/F, 230V", "PL": "Type C/E, 230V",
+    "GR": "Type C/F, 230V", "IT": "Type C/F/L, 230V", "CH": "Type J, 230V", "IS": "Type C/F, 230V",
+    "IN": "Type C/D/M, 230V", "TH": "Type A/B/C, 220V", "TR": "Type C/F, 230V", "ZA": "Type M/N/C, 230V",
+    "BR": "Type C/N, 127/220V", "ID": "Type C/F, 230V", "VN": "Type A/C, 220V", "KR": "Type C/F, 220V",
+  };
+
+  // Answers to QUESTION 6 add their own extras (a pick-ONE question).
+  const transportModes = {
+    "Car":      [ { name: "Road-trip snacks", qty: "fixed" }, { name: "Phone car mount", qty: "fixed" }, { name: "Driving sunglasses", qty: "fixed" } ],
+    "Bus":      [ { name: "Neck pillow", qty: "fixed" }, { name: "Snacks", qty: "fixed" }, { name: "Downloaded entertainment", qty: "fixed" } ],
+    "Train":    [ { name: "Neck pillow", qty: "fixed" }, { name: "Snacks", qty: "fixed" }, { name: "Downloaded entertainment", qty: "fixed" } ],
+    "Airplane": [ { name: "Boarding pass / app", qty: "fixed" }, { name: "Liquids bag (≤100 ml)", qty: "fixed" }, { name: "Neck pillow", qty: "fixed" }, { name: "Power bank (in cabin)", qty: "fixed" } ],
+    "Ship":     [ { name: "Motion-sickness tablets", qty: "fixed" }, { name: "Warm layer for the deck", qty: "fixed" }, { name: "Sun protection", qty: "fixed" } ],
+  };
+
+  // Luggage options (QUESTION 5). A plain number is a fixed usable capacity in
+  // LITRES; an object offers selectable sizes (the user picks one).
+  const bagOptions = {
+    "Cross-body bag":   5,
+    "Under-seat bag":  18,
+    "Rucksack":        { sizes: { "Small": 18, "Medium": 30, "Large": 45 }, default: "Medium" },
+    "Sports bag":      { sizes: { "Small": 30, "Medium": 40, "Large": 55 }, default: "Medium" },
+    "Cabin suitcase":  40,
+    "Checked suitcase":{ sizes: { "Medium": 70, "Large": 95 }, default: "Large" },
+  };
+
+  // Usable capacity (litres) of one chosen bag, honouring its selected size.
+  function bagCapacity(name) {
+    const b = bagOptions[name];
+    if (typeof b === "number") return b;
+    if (!b) return 0;
+    const size = (state.bagSizes && state.bagSizes[name]) || b.default;
+    return b.sizes[size] || 0;
+  }
+
+  // QUESTION 1 extras — each item folds into one of the fixed sections (`sec`).
+  const travelStyles = {
+    "Alone":    [ { name: "Downloaded shows & podcasts", qty: "fixed", sec: "Keeping busy" } ],
+    "Group":    [ { name: "Portable speaker", qty: "fixed", sec: "Devices & Chargers" }, { name: "Card / travel games", qty: "fixed", sec: "Keeping busy" }, { name: "Snacks to share", qty: "fixed", sec: "Travel day items" } ],
+    "Family":   [ { name: "Kids' clothes", qty: "perDay", sec: "Wardrobe" }, { name: "Kids' snacks", qty: "fixed", sec: "Travel day items" }, { name: "Entertainment for kids", qty: "fixed", sec: "Keeping busy" }, { name: "Basic first-aid kit", qty: "fixed", sec: "Toiletries" } ],
+    "Business": [ { name: "Laptop + charger", qty: "fixed", sec: "Devices & Chargers" }, { name: "Formal outfit", qty: "perDay", sec: "Wardrobe" }, { name: "Dress shoes", qty: "fixed", sec: "Wardrobe" }, { name: "Notebook & pen", qty: "fixed", sec: "Devices & Chargers" } ],
+  };
+
+  // Answers to QUESTION 2 add their own extras.
+  const tripTypes = {
+    "City":     [ { name: "Comfortable shoes", qty: "fixed" }, { name: "Day bag", qty: "fixed" }, { name: "Reusable water bottle", qty: "fixed" } ],
+    "Rural":    [ { name: "Sturdy walking shoes", qty: "fixed" }, { name: "Insect repellent", qty: "fixed" }, { name: "Layers for changing weather", qty: "fixed" }, { name: "Reusable shopping bag", qty: "fixed" } ],
+    "Mountain": [ { name: "Warm layers", qty: "fixed" }, { name: "Sturdy boots", qty: "fixed" }, { name: "Hat & gloves", qty: "fixed" }, { name: "Lip balm & sunscreen", qty: "fixed" }, { name: "Daypack", qty: "fixed" } ],
+    "Beach":    [ { name: "Swimsuit", qty: "fixed" }, { name: "Sunscreen", qty: "fixed" }, { name: "Flip-flops", qty: "fixed" }, { name: "Beach towel", qty: "fixed" } ],
+    "Camping":  [ { name: "Tent", qty: "fixed" }, { name: "Sleeping bag", qty: "fixed" }, { name: "Headlamp", qty: "fixed" }, { name: "Camping stove", qty: "fixed" }, { name: "Bug spray", qty: "fixed" } ],
+  };
+
+  // QUESTION 3 — activities are now FREE TEXT the user types. This lookup maps
+  // keywords found in what they type to suggested gear. Anything we don't
+  // recognise is still captured on the list so they can add their own gear.
+  const activityGear = {
+    "hik":      [ "Hiking boots", "Daypack", "Trail snacks", "First-aid kit" ],
+    "swim":     [ "Swimsuit", "Goggles", "Quick-dry towel" ],
+    "snorkel":  [ "Snorkel & mask", "Swimsuit", "Reef-safe sunscreen" ],
+    "dive":     [ "Swimsuit", "Dive logbook" ],
+    "surf":     [ "Swimsuit", "Rash guard" ],
+    "beach":    [ "Swimsuit", "Beach towel", "Sunscreen", "Sandals" ],
+    "run":      [ "Running shoes", "Running clothes" ],
+    "gym":      [ "Trainers", "Workout clothes" ],
+    "sport":    [ "Trainers", "Workout clothes" ],
+    "yoga":     [ "Yoga mat", "Leggings" ],
+    "ski":      [ "Thermal base layers", "Ski gloves", "Goggles" ],
+    "snowboard":[ "Thermal base layers", "Gloves", "Goggles" ],
+    "bike":     [ "Cycling gear", "Padded shorts" ],
+    "cycl":     [ "Cycling gear", "Padded shorts" ],
+    "climb":    [ "Climbing shoes", "Chalk bag" ],
+    "dinner":   [ "Smart outfit", "Dress shoes" ],
+    "nightlife":[ "Going-out outfit", "Dress shoes" ],
+    "party":    [ "Going-out outfit", "Dress shoes" ],
+    "wedding":  [ "Formal outfit", "Dress shoes" ],
+    "museum":   [ "Comfortable shoes", "Day bag" ],
+    "sightsee": [ "Comfortable shoes", "Camera or phone", "Water bottle" ],
+    "photo":    [ "Camera", "Spare batteries", "Memory cards" ],
+    "fish":     [ "Sun hat", "Polarised sunglasses" ],
+    "camp":     [ "Headlamp", "Sleeping bag" ],
+    "danc":     [ "Dancing shoes", "Going-out outfit" ],
+    "golf":     [ "Golf shoes", "Golf glove" ],
+    "tennis":   [ "Tennis shoes", "Sports clothes" ],
+    "kayak":    [ "Quick-dry clothes", "Dry bag", "Water shoes" ],
+    "paddle":   [ "Quick-dry clothes", "Dry bag", "Water shoes" ],
+    "spa":      [ "Swimwear", "Sandals" ],
+    "concert":  [ "Earplugs", "Refillable bottle" ],
+    "festival": [ "Earplugs", "Refillable bottle", "Poncho" ],
+    "shop":     [ "Foldable tote bag" ],
+    "work":     [ "Laptop + charger", "Notebook" ],
+    "business": [ "Laptop + charger", "Smart outfit" ],
+  };
+
+  /* ---- The app's memory (state) ---- */
+  // A brand-new, empty trip. Used at startup and by "Start a new trip".
+  function freshState() {
+    return {
+      travelStyle:    null,   // question 1 (just one)
+      people:         [],     // for Family: who we're packing for
+      pets:           [],     // any pets coming along
+      tripType:       null,   // question 2 (just one)
+      activities:     [],     // question 3 — free text
+      destination:    "",     // question 4 — free text
+      country:        null,    // derived from the destination (for entry docs)
+      countryCode:    null,    // ISO code, e.g. "GB"
+      startDate:      "",     // question 5 — "YYYY-MM-DD"
+      endDate:        "",     // question 5
+      transports:     [],     // question 7 — one OR MORE
+      nights:         3,      // calculated from the dates
+      bags:           [],     // question 6 — one OR MORE
+      bagSizes:       {},     // chosen size per sized bag, e.g. {Rucksack:"Medium"}
+      items:          [],
+      sections:       [],     // the ORDER of sections on screen
+      customSections: [],     // section names the user added themselves
+      notes:          {},     // optional tip text shown under a section
+      weather:        null,   // fetched summary
+      skip:           [],     // generated section groups the user switched off
+      nextId:         0,      // counter so every item gets a unique id
+    };
+  }
+
+  let state = freshState();
+
+  try {
+    const saved = localStorage.getItem("packster");
+    if (saved) state = JSON.parse(saved);
+  } catch (e) {}
+
+  // Make sure the newer fields exist even if an older list was saved before.
+  state.sections       = state.sections       || [];
+  state.customSections = state.customSections  || [];
+  state.bags           = state.bags            || [];
+  state.activities     = state.activities      || [];
+  state.notes          = state.notes           || {};
+  state.skip           = state.skip            || [];
+  state.people         = state.people          || [];
+  state.pets           = state.pets            || [];
+  state.bagSizes       = state.bagSizes         || {};
+  // older trips stored a single `transport`; turn it into a list
+  state.transports     = state.transports || (state.transport ? [state.transport] : []);
+  if (state.nextId == null) state.nextId = state.items.length;
+  normalizeItems();
+
+  /* ---- Other saved data lives in its own "drawers" ----
+     The current trip is saved under "packster" (above). Saved trips and reusable
+     lists each get their own key, so the three never tread on each other. */
+  function loadJSON(key, fallback) {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+    catch (e) { return fallback; }
+  }
+  function saveJSON(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+  }
+
+  let savedTrips = loadJSON("packster_trips", []);      // [{ name, savedAt, data }]
+  let templates  = loadJSON("packster_templates", []);  // [{ name, items: [...] }]
+  let wardrobe   = loadJSON("packster_wardrobe", []);   // [{ name, type }] for the coach
+  let draft      = [];                                  // items typed for a new list
+  let editing    = null;                                // index of the list being edited
+
+  function save() {
+    try { localStorage.setItem("packster", JSON.stringify(state)); } catch (e) {}
+  }
+
+  /* ---- Switching between the screens ---- */
+  function goToPlanner() {
+    document.getElementById("welcome").classList.add("hidden");
+    document.getElementById("lists").classList.add("hidden");
+    document.getElementById("coach").classList.add("hidden");
+    document.getElementById("planner").classList.remove("hidden");
+    // fill in the little trip summary at the top of the planner
+    document.getElementById("tripSummary").innerHTML =
+      `<strong>${escapeHtml(state.destination)}</strong>
+       <div class="trip-meta">
+         <span class="trip-pill">
+           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9h18M8 2.5v4M16 2.5v4"/></svg>
+           ${formatTripDates()}
+         </span>
+         <span class="trip-pill">${nightsFromDates()} nights</span>
+       </div>`;
+    document.getElementById("saveMsg").textContent = "";
+    fillTemplatePicker();
+    renderIncludePicker();
+  }
+  function goToWelcome() {
+    document.getElementById("planner").classList.add("hidden");
+    document.getElementById("lists").classList.add("hidden");
+    document.getElementById("coach").classList.add("hidden");
+    document.getElementById("welcome").classList.remove("hidden");
+    renderSavedTrips();
+  }
+  function goToLists() {
+    document.getElementById("welcome").classList.add("hidden");
+    document.getElementById("planner").classList.add("hidden");
+    document.getElementById("coach").classList.add("hidden");
+    document.getElementById("lists").classList.remove("hidden");
+    renderLists();
+  }
+  function goToCoach() {
+    document.getElementById("welcome").classList.add("hidden");
+    document.getElementById("planner").classList.add("hidden");
+    document.getElementById("lists").classList.add("hidden");
+    document.getElementById("coach").classList.remove("hidden");
+    renderWardrobe();
+  }
+
+  /* ---- Building the chip buttons for a question ----
+     `key` is which part of state we're setting ('travelStyle' or 'tripType').
+     Because each question is pick-ONE, choosing an option just overwrites it. */
+  function drawChoice(containerId, options, key) {
+    const box = document.getElementById(containerId);
+    box.innerHTML = "";
+    options.forEach(opt => {
+      const chip = document.createElement("button");
+      chip.className = "chip" + (state[key] === opt ? " on" : "");
+      chip.textContent = opt;
+      chip.onclick = () => {
+        state[key] = opt;          // remember the answer
+        drawChoice(containerId, options, key);  // redraw so it highlights
+        if (key === "travelStyle") renderFamilyParty();   // show/hide people editor
+        refreshContinue();         // maybe enable the Continue button
+        save();
+      };
+      box.appendChild(chip);
+    });
+  }
+
+  /* ---- Multi-select chips (for luggage) ----
+     The difference from drawChoice: picking an option TOGGLES it in/out of a
+     list, instead of replacing a single value. So you can choose several. */
+  function drawMulti(containerId, names, key) {
+    const box = document.getElementById(containerId);
+    box.innerHTML = "";
+    names.forEach(opt => {
+      const chip = document.createElement("button");
+      chip.className = "chip" + (state[key].includes(opt) ? " on" : "");
+      chip.textContent = opt;
+      chip.onclick = () => {
+        if (state[key].includes(opt)) {
+          state[key] = state[key].filter(x => x !== opt);   // remove it
+        } else {
+          state[key].push(opt);                             // add it
+        }
+        drawMulti(containerId, names, key);
+        refreshContinue();
+        save();
+      };
+      box.appendChild(chip);
+    });
+  }
+
+  /* ---- Luggage picker (multi-select, with a size choice for some bags) ---- */
+  function renderBagPicker() {
+    const box = document.getElementById("bagChips");
+    if (!box) return;
+    const chips = Object.keys(bagOptions).map(name =>
+      `<button class="chip ${state.bags.includes(name) ? "on" : ""}" onclick="toggleBag('${name}')">${escapeHtml(name)}</button>`
+    ).join("");
+    // size selectors for any selected bag that has sizes
+    const sizers = state.bags.filter(b => typeof bagOptions[b] === "object").map(b => {
+      const cur = (state.bagSizes && state.bagSizes[b]) || bagOptions[b].default;
+      const buttons = Object.keys(bagOptions[b].sizes).map(s =>
+        `<button class="chip sm ${s === cur ? "on" : ""}" onclick="setBagSize('${b}','${s}')">${s} · ${bagOptions[b].sizes[s]} L</button>`
+      ).join("");
+      return `<div class="bag-size"><span class="bag-size-label">${escapeHtml(b)} size</span><div class="chips">${buttons}</div></div>`;
+    }).join("");
+    box.innerHTML = `<div class="chips">${chips}</div>${sizers}`;
+  }
+  function toggleBag(name) {
+    const i = state.bags.indexOf(name);
+    if (i >= 0) { state.bags.splice(i, 1); }
+    else {
+      state.bags.push(name);
+      if (typeof bagOptions[name] === "object") {
+        state.bagSizes = state.bagSizes || {};
+        if (!state.bagSizes[name]) state.bagSizes[name] = bagOptions[name].default;
+      }
+    }
+    refreshContinue(); save(); renderBagPicker();
+  }
+  function setBagSize(name, size) {
+    state.bagSizes = state.bagSizes || {};
+    state.bagSizes[name] = size;
+    save(); renderBagPicker();
+  }
+
+  /* ---- Free-text activities (question 3) ----
+     The user types their own; each becomes a removable tag. Same idea as the
+     draft items in the saved-lists editor. */
+  function addActivity() {
+    const input = document.getElementById("activityInput");
+    const text = input.value.trim();
+    if (!text) return;
+    if (!state.activities.some(a => a.toLowerCase() === text.toLowerCase())) {
+      state.activities.push(text);
+    }
+    input.value = "";
+    renderActivities();
+    save();
+    document.getElementById("activityInput").focus();
+  }
+  function removeActivity(i) { state.activities.splice(i, 1); renderActivities(); save(); }
+  function renderActivities() {
+    document.getElementById("activityTags").innerHTML = state.activities.map((a, i) =>
+      `<span class="chip on" onclick="removeActivity(${i})">${escapeHtml(a)} ✕</span>`).join("");
+  }
+
+  /* ---- Family: who are we packing for? ----
+     Shown only when travel style is "Family". Each person becomes their own
+     packing section, so the list scales to the whole party. */
+  function renderFamilyParty() {
+    const box = document.getElementById("familyParty");
+    if (!box) return;
+    const show = state.travelStyle === "Family" || state.travelStyle === "Group";
+    box.classList.toggle("hidden", !show);
+    if (!show) return;
+    const rows = (state.people || []).map((p, i) =>
+      `<div class="person-row">
+         <input class="person-name" value="${escapeHtml(p.name)}" oninput="renamePerson(${i}, this.value)" aria-label="Person name" />
+         <select class="person-kind" onchange="setPersonKind(${i}, this.value)">
+           <option ${p.kind === "Adult" ? "selected" : ""}>Adult</option>
+           <option ${p.kind === "Child" ? "selected" : ""}>Child</option>
+         </select>
+         <button class="person-x" onclick="removePerson(${i})" aria-label="Remove">✕</button>
+       </div>`).join("");
+    document.getElementById("peopleList").innerHTML = rows
+      || `<p class="hint" style="margin:4px 0 10px;">No one added yet — use the buttons below.</p>`;
+  }
+  function addPerson(kind) {
+    state.people = state.people || [];
+    const n = state.people.filter(p => p.kind === kind).length + 1;
+    state.people.push({ name: kind + " " + n, kind });
+    save(); renderFamilyParty();
+  }
+  function removePerson(i) { state.people.splice(i, 1); save(); renderFamilyParty(); }
+  // rename on each keystroke WITHOUT re-rendering, so the input keeps focus
+  function renamePerson(i, value) { state.people[i].name = value; save(); }
+  function setPersonKind(i, value) { state.people[i].kind = value; save(); renderFamilyParty(); }
+
+  /* ---- Pets: who else is coming along? ----
+     Optional and independent of travel style. All pets share one "Pets" section. */
+  function renderPets() {
+    const box = document.getElementById("petsList");
+    if (!box) return;
+    box.innerHTML = (state.pets || []).map((p, i) =>
+      `<div class="person-row">
+         <input class="person-name" value="${escapeHtml(p.name)}" oninput="renamePet(${i}, this.value)" aria-label="Pet name" />
+         <select class="person-kind" onchange="setPetKind(${i}, this.value)">
+           <option ${p.kind === "Dog" ? "selected" : ""}>Dog</option>
+           <option ${p.kind === "Cat" ? "selected" : ""}>Cat</option>
+           <option ${p.kind === "Other" ? "selected" : ""}>Other</option>
+         </select>
+         <button class="person-x" onclick="removePet(${i})" aria-label="Remove">✕</button>
+       </div>`).join("");
+  }
+  function addPet(kind) {
+    state.pets = state.pets || [];
+    const n = state.pets.filter(p => p.kind === kind).length + 1;
+    state.pets.push({ name: kind + " " + n, kind });
+    save(); renderPets();
+  }
+  function removePet(i) { state.pets.splice(i, 1); save(); renderPets(); }
+  function renamePet(i, value) { state.pets[i].name = value; save(); }
+  function setPetKind(i, value) { state.pets[i].kind = value; save(); renderPets(); }
+
+  function refreshContinue() {
+    const datesOk = state.startDate && state.endDate && state.endDate >= state.startDate;
+    const ready = state.travelStyle && state.tripType && state.destination
+                  && datesOk && state.bags.length > 0 && state.transports.length > 0;
+    document.getElementById("continueBtn").disabled = !ready;
+  }
+
+  // Work out the number of nights between the two chosen dates
+  function nightsFromDates() {
+    const start = new Date(state.startDate);
+    const end   = new Date(state.endDate);
+    const ms    = end - start;                       // difference in milliseconds
+    return Math.max(1, Math.round(ms / 86400000));   // 86,400,000 ms = one day
+  }
+
+  // Turn the two ISO dates into a friendly range, e.g. "10 – 17 Jun 2026".
+  function formatTripDates() {
+    if (!state.startDate || !state.endDate) return "";
+    const s = new Date(state.startDate + "T00:00");
+    const e = new Date(state.endDate + "T00:00");
+    const sStr = s.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    const eStr = e.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    return sStr + " – " + eStr;
+  }
+
+  // shift a "YYYY-MM-DD" date by a whole number of years
+  function shiftYear(dateStr, delta) {
+    const [y, m, d] = dateStr.split("-");
+    return (Number(y) + delta) + "-" + m + "-" + d;
+  }
+
+  // Look up coordinates for a place name. Returns the first match or null.
+  async function geocode(query) {
+    const geo = await (await fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&name="
+      + encodeURIComponent(query))).json();
+    return (geo.results && geo.results.length) ? geo.results[0] : null;
+  }
+
+  /* ---- Talking to the internet: get the weather for the destination ----
+     Returns { ok:true, data:{...} } on success, or { ok:false, reason:"..." }
+     so the planner can tell the user exactly what happened. */
+  async function fetchWeather() {
+    state.country = null; state.countryCode = null;   // re-derived from the destination each build
+    if (!state.destination) return { ok: false, reason: "Add a destination to get the weather." };
+    try {
+      // 1) Geocode. Try the whole thing; if that finds nothing and there's a
+      //    comma (e.g. "Lisbon, Portugal"), retry with just the city before it.
+      let place = await geocode(state.destination);
+      if (!place && state.destination.includes(",")) {
+        place = await geocode(state.destination.split(",")[0].trim());
+      }
+      if (!place) return { ok: false, reason: `Couldn't find "${state.destination}" — try just the city or town name.` };
+
+      const placeName = place.name + (place.country ? ", " + place.country : "");
+      state.country     = place.country || null;
+      state.countryCode = (place.country_code || "").toUpperCase() || null;
+      const base = "latitude=" + place.latitude + "&longitude=" + place.longitude
+        + "&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto";
+
+      // 2) Try a real forecast — the forecast service only reaches ~16 days out.
+      let estimate = false;
+      let w = await (await fetch("https://api.open-meteo.com/v1/forecast?" + base
+        + "&start_date=" + state.startDate + "&end_date=" + state.endDate)).json();
+
+      // 3) Further off than that → use the SAME dates last year from the archive.
+      if (!w.daily || !w.daily.time || !w.daily.time.length) {
+        w = await (await fetch("https://archive-api.open-meteo.com/v1/archive?" + base
+          + "&start_date=" + shiftYear(state.startDate, -1)
+          + "&end_date=" + shiftYear(state.endDate, -1))).json();
+        estimate = true;
+      }
+
+      const highs = ((w.daily && w.daily.temperature_2m_max) || []).filter(v => v != null);
+      const lows  = ((w.daily && w.daily.temperature_2m_min) || []).filter(v => v != null);
+      if (!highs.length || !lows.length)
+        return { ok: false, reason: `Found ${placeName}, but no weather data for those dates.` };
+
+      const totalRain = ((w.daily && w.daily.precipitation_sum) || []).reduce((a, b) => a + (b || 0), 0);
+      return { ok: true, data: {
+        place:   placeName,
+        maxTemp: Math.round(Math.max(...highs)),
+        minTemp: Math.round(Math.min(...lows)),
+        rain:    totalRain >= 2,   // 2mm+ across the trip → pack for rain
+        estimate,                  // true = seasonal average, false = real forecast
+      }};
+    } catch (e) {
+      // A thrown error means the request never reached the service. By far the
+      // most common cause is opening the app as a local file, which browsers
+      // block from making internet requests.
+      const reason = location.protocol === "file:"
+        ? "Live weather needs the app opened from a web link (e.g. your Netlify link), not a local file. Your list still works."
+        : "Couldn't reach the weather service — check your connection. (Your list still works.)";
+      return { ok: false, reason };
+    }
+  }
+
+  // Rules that read the WEATHER NUMBERS and decide what to pack.
+  function weatherItems(w) {
+    if (!w) return [];
+    const items = [];
+    if (w.maxTemp >= 25) {                         // hot
+      items.push({ name: "Sun hat", qty: "fixed" });
+      items.push({ name: "Sunglasses", qty: "fixed" });
+      items.push({ name: "Extra water bottle", qty: "fixed" });
+    }
+    if (w.minTemp <= 8) {                          // cold
+      items.push({ name: "Warm jacket", qty: "fixed" });
+      items.push({ name: "Hat & gloves", qty: "fixed" });
+      items.push({ name: "Thermal layer", qty: "perDay" });
+    }
+    if (w.rain) {                                  // wet
+      items.push({ name: "Umbrella", qty: "fixed" });
+      items.push({ name: "Waterproof jacket", qty: "fixed" });
+    }
+    return items;
+  }
+
+  function weatherText(w) {
+    const parts = [w.minTemp + "–" + w.maxTemp + "°C"];
+    if (w.rain) parts.push("some rain");
+    return parts.join(", ");
+  }
+
+  function setStatus(text, busy) {
+    const el = document.getElementById("status");
+    el.textContent = text;
+    el.className = "status" + (busy ? " busy" : "");
+  }
+
+  /* ---- The CAPSULE wardrobe: few pieces, many outfits ----
+     The trick to not overpacking: tops and bottoms should NOT grow one-per-day.
+     A handful of mix-and-match pieces covers a long trip, because the number of
+     outfits is tops × bottoms, not tops + bottoms. */
+  function buildCapsule(nights) {
+    // grow slowly with trip length, but cap it so it never balloons
+    const tops    = Math.min(7, Math.max(3, Math.round(nights * 0.6)));
+    const bottoms = Math.min(4, Math.max(2, Math.round(nights * 0.28)));
+    const wardrobe = [
+      { name: "Versatile top",            qty: tops },
+      { name: "Bottoms (trousers/skirt)", qty: bottoms },
+      { name: "One dressier outfit",      qty: 1 },
+      { name: "Versatile day shoes",      qty: 1 },
+      { name: "Dressier shoes",           qty: 1 },
+      { name: "Belt",                     qty: 1 },
+      { name: "Scarf or wrap",            qty: 1 },
+      { name: "Watch / jewellery",        qty: 1 },
+    ];
+    const outer = [                       // these live in the Outer wear section
+      { name: "Light layer / cardigan",  qty: 1 },
+      { name: "Light jacket",             qty: 1 },
+    ];
+    const outfits = tops * bottoms;
+    const note = `These ${tops} tops and ${bottoms} bottoms mix into about ${outfits} outfits — `
+               + `shoes and accessories restyle them further, so you look fresh every day. `
+               + `Keep to 2–3 colours that all match.`;
+    return { wardrobe, outer, note };
+  }
+
+  /* ---- A rough size estimate (in litres) for one of an item ----
+     This is only a guess to power the luggage gauge — bulky things big,
+     small things small. The earlier checks win, so "laptop" never hits "top". */
+  function unitVolume(name) {
+    const n = name.toLowerCase();
+    if (/tent/.test(n)) return 8;
+    if (/sleeping bag/.test(n)) return 5;
+    if (/jacket|coat|fleece/.test(n)) return 2.5;
+    if (/boots|shoes|flip|outfit/.test(n)) return 2.5;
+    if (/laptop|stove|towel|pillow/.test(n)) return 1.8;
+    if (/layer|cardigan|top|bottom|trouser|skirt|swimsuit|thermal|dress/.test(n)) return 0.8;
+    if (/passport|wallet|phone|charger|sunglasses|cards|notebook|kit/.test(n)) return 0.2;
+    return 0.6;   // default: a small everyday item
+  }
+
+  // Normalise a name for loose matching: lower-case, letters/digits/spaces only.
+  function normName(s) { return s.toLowerCase().replace(/[^a-z0-9 ]/g, "").trim(); }
+
+  // Is this a Group/Family trip with specific people listed? (each gets a section)
+  function isFamilyParty() {
+    const party = state.travelStyle === "Family" || state.travelStyle === "Group";
+    return party && (state.people || []).length > 0;
+  }
+
+  // The combined supplies for whatever pets are coming along (deduped by name).
+  function petItems(pets, nights) {
+    const kinds = new Set(pets.map(p => p.kind));
+    const names = [
+      "Food & treats", "Food & water bowls", "Vaccination & health records",
+      "Medication", "Bed or blanket", "Favourite toy",
+    ];
+    if (kinds.has("Dog")) names.push("Lead & harness", "Waste bags", "Towel for muddy paws");
+    if (kinds.has("Cat")) names.push("Litter & tray", "Carrier");
+    if (kinds.has("Other")) names.push("Carrier or tank", "Bedding/substrate");
+    const seen = new Set();
+    return names.filter(n => { const k = n.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
+                .map(name => ({ name, qty: "fixed" }));
+  }
+
+  // A personal clothing/toiletry checklist for one family member, scaled by nights.
+  function personItems(p, nights) {
+    const child = p.kind === "Child";
+    const tops    = child ? Math.min(8, nights) : Math.min(5, Math.max(2, Math.round(nights * 0.5)));
+    const bottoms = child ? Math.min(4, Math.max(2, Math.round(nights * 0.4)))
+                          : Math.min(3, Math.max(1, Math.round(nights * 0.25)));
+    const items = [
+      { name: "Tops",        qty: tops },
+      { name: "Bottoms",     qty: bottoms },
+      { name: "Underwear",   qty: "perDay" },
+      { name: "Socks",       qty: "perDay" },
+      { name: "Sleepwear",   qty: 1 },
+      { name: "Light jacket", qty: 1 },
+      { name: "Toothbrush",  qty: 1 },
+    ];
+    if (child) {
+      items.push({ name: "Extra outfit (spills)", qty: 1 });
+      items.push({ name: "Comfort toy",           qty: 1 });
+    }
+    return items;
+  }
+
+  /* ---- The canonical list of sections, in the order they should appear ----
+     buildList only keeps the ones that actually produce items; the planner
+     toggles read the same list, so order and toggles always agree. */
+  function tripSections() {
+    const family = isFamilyParty();
+    const list = ["Travel Documents", "Toiletries"];
+    if (family) state.people.forEach(p => list.push(p.name));   // a section per person
+    else        list.push("Underwear & Socks", "Wardrobe");
+    list.push("Keeping busy");
+    if ((state.pets || []).length) list.push("Pets");
+    list.push("Devices & Chargers");
+    if (state.tripType) list.push(state.tripType + " Gear");
+    if (state.activities.length) list.push("Activity Gear");
+    if (state.transports.length) list.push("Travel day items");
+    list.push("Weather Gear");
+    if (!family) list.push("Outer wear");   // for a family, each person's section holds their layers
+    return list;
+  }
+
+  /* ---- The rules engine, now weather-aware (and async because of the fetch) ---- */
+  async function buildList() {
+    state.nights = nightsFromDates();   // dates are the single source of truth
+
+    // tell the user we're waiting, and stop double-taps on the button
+    const btn = document.getElementById("buildBtn");
+    btn.disabled = true;
+    setStatus("Checking the forecast for " + state.destination + "…", true);
+
+    const res = await fetchWeather();   // <-- the slow part; we wait for it
+    state.weather = res.ok ? res.data : null;
+
+    btn.disabled = false;
+    if (res.ok) {
+      const lead = res.data.estimate
+        ? "Typical weather in " + res.data.place + " around then: "
+        : "Forecast for " + res.data.place + ": ";
+      setStatus(lead + weatherText(res.data), false);
+    } else {
+      setStatus(res.reason, false);
+    }
+
+    // Keep anything the user added by hand (custom items + added saved lists).
+    const customItems = state.items.filter(i => i.custom);
+
+    // The sections this trip actually has, in order. A section is generated only
+    // if it's in this list AND the user hasn't switched it off — so suppressed
+    // sections (e.g. the single-traveller Wardrobe on a family trip) never leak items.
+    const sections = tripSections();
+    const include = name => sections.includes(name) && !(state.skip || []).includes(name);
+    const typeSection = state.tripType + " Gear";   // e.g. "Rural Gear"
+    const family = isFamilyParty();
+
+    const collected = [];
+    state.notes = {};
+
+    // base sections (Travel Documents, Toiletries, Devices & Chargers, Underwear & Socks)
+    for (const sectionName in baseItems) {
+      if (include(sectionName)) baseItems[sectionName].forEach(item => collected.push({ category: sectionName, ...item }));
+    }
+
+    // Destination-specific entry authorisation (e.g. UK ETA, US ESTA), if any.
+    if (include("Travel Documents") && state.countryCode && entryDocs[state.countryCode]) {
+      collected.push({ category: "Travel Documents", name: entryDocs[state.countryCode], qty: "fixed" });
+    }
+
+    // Destination plug type → a travel-adapter reminder in Devices & Chargers.
+    if (include("Devices & Chargers") && state.countryCode && plugInfo[state.countryCode]) {
+      collected.push({ category: "Devices & Chargers", name: "Travel adapter — " + plugInfo[state.countryCode], qty: "fixed" });
+    }
+
+    // Family: a personal clothing/toiletry section for each person
+    if (family) {
+      state.people.forEach(p => {
+        if (!include(p.name)) return;
+        personItems(p, state.nights).forEach(item => collected.push({ category: p.name, ...item }));
+      });
+    }
+
+    // Pets: one shared section of supplies for whatever pets are coming
+    if (include("Pets") && (state.pets || []).length) {
+      petItems(state.pets, state.nights).forEach(item => collected.push({ category: "Pets", ...item }));
+    }
+
+    // Wardrobe + Outer wear come from the capsule (single-traveller trips only)
+    if (include("Wardrobe") || include("Outer wear")) {
+      const capsule = buildCapsule(state.nights);
+      if (include("Wardrobe")) {
+        capsule.wardrobe.forEach(item => collected.push({ category: "Wardrobe", ...item }));
+        state.notes["Wardrobe"] = capsule.note;
+      }
+      if (include("Outer wear")) capsule.outer.forEach(item => collected.push({ category: "Outer wear", ...item }));
+    }
+
+    // travel-style extras fold into whichever section each item belongs to
+    travelStyles[state.travelStyle].forEach(item => {
+      if (include(item.sec)) collected.push({ category: item.sec, ...item });
+    });
+
+    // trip-type gear → "{Type} Gear"
+    if (include(typeSection)) tripTypes[state.tripType].forEach(item =>
+      collected.push({ category: typeSection, ...item }));
+
+    // Activity Gear — the kit your chosen activities need (from recognised keywords).
+    // Skip anything already suggested by another section (e.g. a Beach trip already
+    // packs a swimsuit), so Activity Gear and "{Type} Gear" don't repeat each other.
+    if (include("Activity Gear")) {
+      const already = collected.map(i => normName(i.name));
+      // loose match: same name, or one clearly contains the other (≥4 chars)
+      const loose = (a, b) => a === b || (Math.min(a.length, b.length) >= 4 && (a.includes(b) || b.includes(a)));
+      const matchesExisting = k => already.some(o => loose(o, k));
+      const gearNames = [];
+      state.activities.forEach(act => {
+        const lower = act.toLowerCase();
+        for (const key in activityGear) {
+          if (lower.includes(key)) activityGear[key].forEach(n => gearNames.push(n));
+        }
+      });
+      const seenAct = new Set();
+      gearNames.filter(n => {
+        const k = normName(n);
+        if (seenAct.has(k) || matchesExisting(k)) return false;
+        seenAct.add(k); return true;
+      }).forEach(name => collected.push({ category: "Activity Gear", name, qty: "fixed" }));
+    }
+
+    // Travel day items (everything for the journey itself)
+    if (include("Travel day items")) state.transports.forEach(tp =>
+      transportModes[tp].forEach(item => collected.push({ category: "Travel day items", ...item })));
+
+    // Weather Gear (driven by the forecast)
+    if (include("Weather Gear")) weatherItems(state.weather).forEach(item =>
+      collected.push({ category: "Weather Gear", ...item }));
+
+    // YOUR ITEMS WIN: drop any suggestion you've already added yourself.
+    const owned = customItems.map(i => normName(i.name));
+    const isOwned = name => {
+      const g = normName(name);
+      return owned.some(o => o === g || (o.length >= 4 && (o.includes(g) || g.includes(o))));
+    };
+
+    const generated = collected.filter(item => !isOwned(item.name)).map(item => {
+      const count = item.qty === "perDay" ? state.nights
+                  : (typeof item.qty === "number" ? item.qty : 1);
+      const vol   = +(count * unitVolume(item.name)).toFixed(1);
+      return { id: state.nextId++, category: item.category, name: item.name, count, packed: false, vol };
+    });
+
+    state.items = [...generated, ...customItems];
+
+    // Section order: the canonical order, keeping only sections that have items,
+    // then any of the user's own sections.
+    const genCats = new Set(generated.map(i => i.category));
+    const gen = sections.filter(s => genCats.has(s));
+    const extra = [];
+    customItems.forEach(i => { if (!gen.includes(i.category) && !extra.includes(i.category)) extra.push(i.category); });
+    state.customSections.forEach(s => { if (!gen.includes(s) && !extra.includes(s)) extra.push(s); });
+    state.sections = [...gen, ...extra];
+
+    save();
+    render();
+  }
+
+  // Make user-typed text safe to drop into HTML (turns < > & into harmless text)
+  function escapeHtml(s) {
+    return s.replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c]));
+  }
+
+  function render() {
+    const out = document.getElementById("output");
+    if (state.items.length === 0 && state.sections.length === 0) {
+      out.innerHTML = '<p style="color:var(--muted);text-align:center;padding:30px 0;">Your packing list will appear here.</p>';
+      return;
+    }
+
+    const packed = state.items.filter(i => i.packed).length;
+    const total  = state.items.length;
+    const pct    = total ? Math.round((packed / total) * 100) : 0;
+
+    let html = `<div class="progress-wrap">
+        <div class="bar"><span style="width:${pct}%"></span></div>
+        <small>${packed} / ${total} packed</small>
+      </div>`;
+
+    // ---- Luggage gauge ----
+    // capacity = total bag space; totalVol = size of EVERYTHING on the list;
+    // packedVol = size of just the items you've ticked off (what's in the bag).
+    const capacity  = state.bags.reduce((sum, b) => sum + bagCapacity(b), 0);
+    const totalVol  = state.items.reduce((sum, i) => sum + (i.vol || 0), 0);
+    const packedVol = state.items.reduce((sum, i) => sum + (i.packed ? (i.vol || 0) : 0), 0);
+    if (capacity > 0) {
+      // the BAR fills as you pack (packed vs capacity) — don't round, so small items show
+      const fill = Math.min(100, (packedVol / capacity) * 100);
+      // the VERDICT is about whether everything will fit (total vs capacity)
+      let level = "ok", msg = `Should all fit — ${totalVol.toFixed(1)} L of ${capacity} L total`;
+      if (totalVol > capacity)             { level = "over";  msg = `Won't all fit — ${totalVol.toFixed(1)} L vs ${capacity} L`; }
+      else if (totalVol > capacity * 0.85) { level = "tight"; msg = `Tight — ${totalVol.toFixed(1)} L of ${capacity} L total`; }
+      html += `<div class="gauge ${level}">
+          <div class="gauge-top">
+            <span>${state.bags.map(b => typeof bagOptions[b] === "object"
+                ? escapeHtml(b) + " (" + ((state.bagSizes && state.bagSizes[b]) || bagOptions[b].default) + ")"
+                : escapeHtml(b)).join(" + ")}</span>
+            <span>${packedVol.toFixed(1)} / ${capacity} L in the bag</span>
+          </div>
+          <div class="bar"><span style="width:${fill}%"></span></div>
+          <small>${msg}</small>
+        </div>`;
+    }
+
+    // ---- Carry-on liquids warning ----
+    // Only matters if flying WITHOUT a checked bag (liquids travel freely in checked).
+    const carryOnFlight = state.transports.includes("Airplane") && !state.bags.includes("Checked suitcase");
+    if (carryOnFlight) {
+      const liquidRe = /\b(shampoo|conditioner|sunscreen|sun cream|suncream|lotion|moisturiser|moisturizer|gel|perfume|cologne|spray|liquid|wash|cleanser|toner|serum|oil|balm|toothpaste|deodorant|mascara|foundation|repellent|aloe|cream|aftershave|hairspray)\b/i;
+      const liquids = state.items.filter(i => liquidRe.test(i.name));
+      if (liquids.length) {
+        const names = liquids.slice(0, 4).map(i => escapeHtml(i.name)).join(", ");
+        html += `<div class="warn-banner">✈️ Flying carry-on only? Liquids must be ≤100 ml each, in one small clear bag.
+            You've listed ${liquids.length} liquid${liquids.length > 1 ? "s" : ""} (${names}${liquids.length > 4 ? "…" : ""}) —
+            check they'll fit, or move them to a checked bag.</div>`;
+      }
+    }
+
+    // We loop over the STORED section list (state.sections), not the items,
+    // so a brand-new empty section like "Medicine" still shows up.
+    state.sections.forEach((cat, sIndex) => {
+      const inCat = state.items.filter(i => i.category === cat);
+      const allPacked = inCat.length > 0 && inCat.every(i => i.packed);
+      const badge = allPacked ? `<span class="badge">Packed ✓</span>` : "";
+
+      html += `<div class="cat ${allPacked ? 'done' : ''}">
+          <span class="cat-name">${escapeHtml(cat)}</span>${badge}
+          <button class="sec-del" onclick="deleteSection(${sIndex})" title="Delete section">✕</button>
+        </div>`;
+      // optional guidance note for this section (e.g. the capsule tip)
+      if (state.notes[cat]) html += `<p class="tip">${escapeHtml(state.notes[cat])}</p>`;
+      html += `<ul class="dnd" data-section-index="${sIndex}">`;
+      inCat.forEach(item => {
+        html += `<li class="${item.packed ? 'done' : ''}" data-id="${item.id}" onclick="togglePacked(${item.id})">
+            <span class="drag-handle" onclick="event.stopPropagation()">⠿</span>
+            <span class="box">${item.packed ? '✓' : ''}</span>
+            <span class="label">${escapeHtml(item.name)}</span>
+            <span class="counter" onclick="event.stopPropagation()">
+              <button onclick="changeCount(${item.id}, -1)">−</button>
+              <span class="count-n">${item.count}</span>
+              <button onclick="changeCount(${item.id}, 1)">+</button>
+            </span>
+            <button class="item-del" onclick="event.stopPropagation(); deleteItem(${item.id})" title="Delete item">✕</button>
+          </li>`;
+      });
+      html += `</ul>`;
+
+      // the "+ add your own item" row for this section
+      html += `<div class="adder">
+          <input id="add-${sIndex}" placeholder="Add to ${escapeHtml(cat)}…"
+                 onkeydown="if(event.key==='Enter') addItemFromInput(${sIndex})">
+          <button onclick="addItemFromInput(${sIndex})">+</button>
+        </div>`;
+    });
+
+    // the "+ add a whole new section" row at the very bottom
+    html += `<div class="adder section-adder">
+        <input id="add-section" placeholder="New section, e.g. Medicine"
+               onkeydown="if(event.key==='Enter') addSectionFromInput()">
+        <button onclick="addSectionFromInput()">+ Section</button>
+      </div>`;
+
+    out.innerHTML = html;
+    initDnD();   // make the freshly-drawn items draggable
+  }
+
+  /* ---- Drag and drop (powered by the SortableJS library) ----
+     We let the library physically move the <li> elements around. Then, when a
+     drag ends, we read the new on-screen order back INTO our state — so the data
+     always matches what the user sees. (DOM moved → state catches up.) */
+  function initDnD() {
+    if (!window.Sortable) return;   // library didn't load — list still works, just no drag
+    document.querySelectorAll('#output ul.dnd').forEach(ul => {
+      new Sortable(ul, {
+        group: "packing",          // same group on every list = items can cross between them
+        handle: ".drag-handle",    // only the ⠿ grip starts a drag, so tapping still ticks items
+        animation: 150,
+        onEnd: () => { syncOrderFromDOM(); save(); render(); },
+      });
+    });
+  }
+
+  // Rebuild state.items from the current on-screen arrangement.
+  function syncOrderFromDOM() {
+    const reordered = [];
+    document.querySelectorAll('#output ul.dnd').forEach(ul => {
+      const cat = state.sections[+ul.dataset.sectionIndex];   // which section this list is
+      ul.querySelectorAll('li[data-id]').forEach(li => {
+        const item = state.items.find(x => x.id === +li.dataset.id);
+        if (item) { item.category = cat; reordered.push(item); }   // moved? update its section
+      });
+    });
+    // safety net: keep any item that somehow wasn't on screen
+    state.items.forEach(it => { if (!reordered.includes(it)) reordered.push(it); });
+    state.items = reordered;
+  }
+
+  /* ---- Deleting things ---- */
+
+  // change an item's quantity with the +/- stepper (never below 1)
+  function changeCount(id, delta) {
+    const item = state.items.find(i => i.id === id);
+    if (!item) return;
+    item.count = Math.max(1, (item.count || 1) + delta);
+    item.vol = +(item.count * unitVolume(item.name)).toFixed(1);   // size follows the count
+    save();
+    render();
+  }
+
+  // Upgrade items saved in the old shape ("T-shirt  ×3" baked into label)
+  // into the new shape (name "T-shirt", count 3). Runs on load.
+  function normalizeItems() {
+    state.items = (state.items || []).map(it => {
+      if (it.name === undefined) {
+        const m = String(it.label || "").match(/^(.*?)\s+×(\d+)$/);
+        it.name  = m ? m[1].trim() : (it.label || "");
+        it.count = m ? +m[2] : 1;
+      }
+      if (it.count == null) it.count = 1;
+      if (it.vol == null) it.vol = +(it.count * unitVolume(it.name)).toFixed(1);
+      delete it.label;   // no longer used
+      return it;
+    });
+  }
+
+  // remove a single item by its id
+  function deleteItem(id) {
+    state.items = state.items.filter(i => i.id !== id);
+    save();
+    render();
+  }
+
+  // remove a whole section: its items, the section itself, and any note
+  function deleteSection(sIndex) {
+    const cat = state.sections[sIndex];
+    state.items = state.items.filter(i => i.category !== cat);   // drop its items
+    state.sections.splice(sIndex, 1);                            // remove the heading
+    state.customSections = state.customSections.filter(s => s !== cat);
+    delete state.notes[cat];
+    save();
+    render();
+  }
+
+  /* ---- Adding things ---- */
+
+  // create one item in a section
+  function addItem(category, label) {
+    state.items.push({ id: state.nextId++, category, name: label, count: 1, packed: false,
+                       custom: true, vol: unitVolume(label) });
+    save();
+    render();
+  }
+
+  // read the little input under a section, then add the item
+  function addItemFromInput(sIndex) {
+    const cat = state.sections[sIndex];
+    const input = document.getElementById("add-" + sIndex);
+    const text = input.value.trim();
+    if (!text) return;          // ignore empty
+    addItem(cat, text);
+  }
+
+  // read the bottom input, then create a new empty section
+  function addSectionFromInput() {
+    const input = document.getElementById("add-section");
+    const name = input.value.trim();
+    if (!name) return;
+    if (state.sections.includes(name)) return;   // no duplicates
+    state.customSections.push(name);
+    state.sections.push(name);
+    save();
+    render();
+  }
+
+  function togglePacked(id) {
+    const item = state.items.find(i => i.id === id);
+    if (item) item.packed = !item.packed;
+    save();
+    render();
+  }
+
+  /* ===================== SAVED TRIPS ===================== */
+
+  // An independent COPY, so editing the live trip never changes the saved one.
+  // (Without this, both would point at the SAME object — a classic, confusing bug.)
+  function copyOf(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+  function saveTripFromInput() {
+    const input = document.getElementById("tripNameInput");
+    const name = input.value.trim();
+    if (!name) return;
+    const record = { name, savedAt: Date.now(), data: copyOf(state) };
+    const existing = savedTrips.findIndex(t => t.name === name);
+    if (existing >= 0) savedTrips[existing] = record;   // same name → overwrite
+    else savedTrips.push(record);
+    saveJSON("packster_trips", savedTrips);
+    input.value = "";
+    document.getElementById("saveMsg").textContent = `Saved "${name}".`;
+    renderSavedTrips();
+  }
+
+  function loadTrip(index) {
+    state = copyOf(savedTrips[index].data);   // load a fresh copy, not the original
+    // a trip saved before this change may still have a single `transport`
+    state.transports = state.transports || (state.transport ? [state.transport] : []);
+    state.activities = state.activities || [];
+    normalizeItems();
+    save();
+    syncWelcomeUI();    // make the question screen match the loaded trip
+    goToPlanner();
+    render();
+  }
+
+  function deleteTrip(index) {
+    savedTrips.splice(index, 1);
+    saveJSON("packster_trips", savedTrips);
+    renderSavedTrips();
+  }
+
+  // Clear ONLY the working trip (the questionnaire + its list) and go to a blank
+  // start. Saved trips, lists, and wardrobe are untouched.
+  function newTrip() {
+    state = freshState();
+    save();
+    syncWelcomeUI();   // blank the chips, inputs and activity tags
+    render();          // reset the planner's list area to empty
+    goToWelcome();
+  }
+
+  function renderSavedTrips() {
+    const box = document.getElementById("savedTripsPanel");
+    if (!savedTrips.length) { box.innerHTML = ""; return; }   // nothing to show
+    let html = `<div class="panel"><p class="question">Saved trips</p>`;
+    savedTrips.forEach((t, i) => {
+      html += `<div class="saved-row">
+          <span>${escapeHtml(t.name)}</span>
+          <span>
+            <button class="mini" onclick="loadTrip(${i})">Open</button>
+            <button class="mini danger" onclick="deleteTrip(${i})">✕</button>
+          </span>
+        </div>`;
+    });
+    box.innerHTML = html + `</div>`;
+  }
+
+  // Redraw the welcome controls to match the current state (used after loading a trip)
+  function syncWelcomeUI() {
+    drawChoice("styleChips",     Object.keys(travelStyles),   "travelStyle");
+    drawChoice("typeChips",      Object.keys(tripTypes),      "tripType");
+    renderActivities();
+    renderFamilyParty();
+    renderPets();
+    drawMulti("transportChips",  Object.keys(transportModes), "transports");
+    renderBagPicker();
+    document.getElementById("destInput").value  = state.destination || "";
+    document.getElementById("startInput").value = state.startDate || "";
+    document.getElementById("endInput").value   = state.endDate || "";
+    refreshContinue();
+  }
+
+  /* ===================== PRE-PREPARED LISTS (templates) ===================== */
+
+  function addDraftItem() {
+    const input = document.getElementById("draftItemInput");
+    const text = input.value.trim();
+    if (!text) return;
+    draft.push(text);
+    input.value = "";
+    renderLists();
+    document.getElementById("draftItemInput").focus();
+  }
+
+  function removeDraftItem(i) { draft.splice(i, 1); renderLists(); }
+
+  // Load an existing list back into the form so it can be changed.
+  function editTemplate(i) {
+    editing = i;
+    draft = templates[i].items.slice();                 // a copy, so we don't edit it live
+    document.getElementById("newListName").value = templates[i].name;
+    renderLists();
+    document.getElementById("newListName").scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function cancelEdit() {
+    editing = null;
+    draft = [];
+    document.getElementById("newListName").value = "";
+    renderLists();
+  }
+
+  function saveTemplate() {
+    const name = document.getElementById("newListName").value.trim();
+    if (!name || !draft.length) return;   // need a name and at least one item
+    const record = { name, items: draft.slice() };   // slice() = a copy of the array
+    if (editing !== null) {
+      templates[editing] = record;        // editing an existing list (rename is fine)
+    } else {
+      const existing = templates.findIndex(t => t.name === name);
+      if (existing >= 0) templates[existing] = record;   // same name → overwrite
+      else templates.push(record);
+    }
+    saveJSON("packster_templates", templates);
+    cancelEdit();   // clears the form and exits edit mode, then re-renders
+  }
+
+  function deleteTemplate(i) {
+    templates.splice(i, 1);
+    saveJSON("packster_templates", templates);
+    // keep the edit marker pointing at the right list after the array shifts
+    if (editing === i) cancelEdit();
+    else { if (editing !== null && i < editing) editing--; renderLists(); }
+  }
+
+  function renderLists() {
+    const panel = document.getElementById("templatesPanel");
+    if (!templates.length) {
+      panel.innerHTML = `<p class="hint">No saved lists yet — make one below.</p>`;
+    } else {
+      panel.innerHTML = templates.map((t, i) => `<div class="panel">
+          <div class="saved-row">
+            <span><strong>${escapeHtml(t.name)}</strong> · ${t.items.length} items</span>
+            <span>
+              <button class="mini" onclick="editTemplate(${i})">Edit</button>
+              <button class="mini danger" onclick="deleteTemplate(${i})">✕</button>
+            </span>
+          </div>
+          <p class="tip" style="font-style:normal;">${t.items.map(escapeHtml).join(", ")}</p>
+        </div>`).join("");
+    }
+    // the list currently being typed up
+    document.getElementById("draftItems").innerHTML = draft.map((item, i) =>
+      `<span class="chip on" onclick="removeDraftItem(${i})">${escapeHtml(item)} ✕</span>`).join("");
+
+    // switch the form between "new" and "editing" modes
+    const isEdit = editing !== null;
+    document.getElementById("listFormTitle").textContent =
+      isEdit ? `Editing "${templates[editing].name}"` : "New list";
+    document.getElementById("saveListBtn").textContent = isEdit ? "Save changes" : "Save this list";
+    document.getElementById("cancelEditBtn").style.display = isEdit ? "inline-block" : "none";
+  }
+
+  /* ---- Choosing which suggested sections to generate ---- */
+  function renderIncludePicker() {
+    const box = document.getElementById("includePicker");
+    if (!box) return;
+    const chips = tripSections().map(name =>
+      `<button class="chip ${(state.skip || []).includes(name) ? "" : "on"}" onclick="toggleSection('${escapeHtml(name)}')">${escapeHtml(name)}</button>`
+    ).join("");
+    box.innerHTML = `<p class="hint" style="margin:16px 0 8px;">Suggested sections — switch off any you're bringing your own version of:</p>`
+      + `<div class="chips">${chips}</div>`;
+  }
+  function toggleSection(key) {
+    state.skip = state.skip || [];
+    if (state.skip.includes(key)) state.skip = state.skip.filter(k => k !== key);
+    else state.skip.push(key);
+    save();
+    renderIncludePicker();
+  }
+
+  /* ---- Dropping a pre-prepared list into the current trip ---- */
+  function fillTemplatePicker() {
+    const box = document.getElementById("templatePicker");
+    if (!templates.length) { box.innerHTML = ""; return; }
+    const opts = templates.map((t, i) => `<option value="${i}">${escapeHtml(t.name)}</option>`).join("");
+    box.innerHTML = `<div class="adder">
+        <select id="templateSelect">${opts}</select>
+        <button onclick="addTemplateToTrip()">+ Add list</button>
+      </div>`;
+  }
+
+  function addTemplateToTrip() {
+    const t = templates[+document.getElementById("templateSelect").value];
+    if (!t) return;
+    // give the list its own section (unless it's already there)
+    if (!state.sections.includes(t.name)) {
+      state.sections.push(t.name);
+      if (!state.customSections.includes(t.name)) state.customSections.push(t.name);
+    }
+    t.items.forEach(name => addItem(t.name, name));   // addItem saves + re-renders
+  }
+
+  /* ===================== CAPSULE COACH ===================== */
+
+  // Best guess at an item's type from its words. The user can override it.
+  function guessType(name) {
+    const n = name.toLowerCase();
+    if (/\b(dress|gown|jumpsuit|dungaree|dungarees|overall|overalls|romper|playsuit)\b/.test(n)) return "dress";
+    if (/\b(cardigan|jacket|coat|blazer|jumper|sweater|hoodie|fleece|shawl|wrap)\b/.test(n)) return "layer";
+    if (/\b(shoe|shoes|boot|boots|trainer|trainers|sneaker|sneakers|sandal|sandals|heel|heels|flip|loafer|loafers|flats)\b/.test(n)) return "shoes";
+    if (/\b(jean|jeans|trouser|trousers|chino|chinos|short|shorts|skirt|legging|leggings|pant|pants|slacks)\b/.test(n)) return "bottom";
+    if (/\b(belt|scarf|hat|cap|beanie|sunglasses|sunnies|jewellery|jewelry|necklace|earring|earrings|bracelet|watch|tie|bag|purse|clutch|tote|gloves)\b/.test(n)) return "accessory";
+    if (/\b(top|t-?shirt|tee|shirt|blouse|tank|cami|vest|sweatshirt|polo|jersey)\b/.test(n)) return "top";
+    return "";   // unknown — user sets it with the picker
+  }
+
+  const NEUTRALS = ["black","white","grey","gray","navy","beige","denim","jean","tan","cream","khaki","brown","charcoal","stone","ecru"];
+  const ACCENTS  = ["red","yellow","orange","pink","green","blue","purple","teal","turquoise","coral","gold","burgundy","mustard","lilac","mint","fuchsia","magenta"];
+
+  function colorInfo(name) {
+    const n = name.toLowerCase();
+    const neutral = NEUTRALS.some(c => n.includes(c));
+    const accentColors = ACCENTS.filter(c => n.includes(c));
+    return { neutral, accentColors };
+  }
+  function isStatement(name) {
+    return /\b(print|printed|pattern|patterned|floral|stripe|striped|sequin|sequins|graphic|logo|bold|statement|leopard|animal|polka)\b/.test(name.toLowerCase());
+  }
+
+  function typeOptions(sel) {
+    return [["","Type…"],["top","Top"],["bottom","Bottom"],["dress","Dress / one-piece"],["layer","Layer"],["shoes","Shoes"],["accessory","Accessory"]]
+      .map(([v,l]) => `<option value="${v}" ${v===sel?"selected":""}>${l}</option>`).join("");
+  }
+
+  function renderWardrobe() {
+    const box = document.getElementById("wardItems");
+    if (!wardrobe.length) {
+      box.innerHTML = `<p class="hint" style="margin:0;">No items yet — add what you're considering above.</p>`;
+    } else {
+      box.innerHTML = wardrobe.map((w, i) => `<div class="ward-row" data-i="${i}">
+          <span class="drag-handle" onclick="event.stopPropagation()">⠿</span>
+          <span class="ward-name">${escapeHtml(w.name)}</span>
+          <select onchange="setWardType(${i}, this.value)">${typeOptions(w.type)}</select>
+          <button class="item-del" onclick="removeWard(${i})" title="Remove">✕</button>
+        </div>`).join("");
+      initWardDnD();   // let the rows be dragged to group them
+    }
+    document.getElementById("saveWardrobePanel").style.display = wardrobe.length ? "block" : "none";
+  }
+
+  // drag to reorder/group the wardrobe rows (tops together, shoes together, etc.)
+  function initWardDnD() {
+    if (!window.Sortable) return;
+    new Sortable(document.getElementById("wardItems"), {
+      handle: ".drag-handle",
+      animation: 150,
+      onEnd: syncWardrobeFromDOM,
+    });
+  }
+  // read the new on-screen order back into the wardrobe array
+  function syncWardrobeFromDOM() {
+    const rows = [...document.querySelectorAll('#wardItems .ward-row')];
+    const reordered = rows.map(r => wardrobe[+r.dataset.i]).filter(Boolean);
+    if (reordered.length === wardrobe.length) wardrobe = reordered;
+    saveJSON("packster_wardrobe", wardrobe);
+    renderWardrobe();   // re-render so the indices line up again
+  }
+
+  function addWard() {
+    const input = document.getElementById("wardInput");
+    const text = input.value.trim();
+    if (!text) return;
+    wardrobe.push({ name: text, type: guessType(text) });
+    input.value = "";
+    saveJSON("packster_wardrobe", wardrobe);
+    renderWardrobe();
+    input.focus();
+  }
+  function removeWard(i) { wardrobe.splice(i, 1); saveJSON("packster_wardrobe", wardrobe); renderWardrobe(); }
+  function setWardType(i, val) { wardrobe[i].type = val; saveJSON("packster_wardrobe", wardrobe); }
+
+  // The advice itself — rules-based, advisory, kind.
+  function evaluateWardrobe() {
+    const results = document.getElementById("coachResults");
+    if (!wardrobe.length) {
+      results.innerHTML = `<div class="panel"><p class="hint" style="margin:0;">Add a few items first, then I'll take a look.</p></div>`;
+      return;
+    }
+
+    const byType = { top:0, bottom:0, dress:0, layer:0, shoes:0, accessory:0 };
+    const unknown = [];
+    let neutralCount = 0, statements = 0, layerName = "";
+    const accentSet = new Set();
+
+    wardrobe.forEach(w => {
+      if (!w.type) { unknown.push(w.name); return; }
+      byType[w.type]++;
+      if (w.type === "layer" && !layerName) layerName = w.name;
+      const c = colorInfo(w.name);
+      if (c.neutral) neutralCount++;
+      c.accentColors.forEach(a => accentSet.add(a));
+      if (isStatement(w.name)) statements++;
+    });
+
+    const { top:tops, bottom:bottoms, dress:dresses, layer:layers, shoes, accessory:accessories } = byType;
+    const combos = tops * bottoms;
+    let outfits = combos + dresses;
+    if (combos > 0 && layers > 0) outfits += Math.round(combos * 0.5 * Math.min(layers, 2));
+
+    const counted = wardrobe.length - unknown.length;
+    const sized = outfits >= 8 ? "plenty to work with"
+                : outfits >= 5 ? "a good base to build on"
+                : "a slim capsule — a couple of additions go a long way";
+    const summary = counted > 0
+      ? `These ${counted} piece${counted !== 1 ? "s" : ""} make about ${Math.max(outfits, 1)} outfit${outfits !== 1 ? "s" : ""} — ${sized}.`
+      : `Set the type on your items and I'll work out the outfits.`;
+
+    const wins = [];
+    if (neutralCount >= 2) wins.push("A solid neutral base — these go with everything.");
+    if (layers >= 1) wins.push(`Your ${escapeHtml(layerName || "layer")} is a multiplier — it restyles other pieces. Keep it.`);
+    if (dresses >= 1) wins.push("You've a one-and-done outfit sorted with your dress or one-piece.");
+    if (accentSet.size >= 1 && accentSet.size <= 2) wins.push("A pop of colour without overdoing it.");
+    if (accessories >= 2) wins.push("Your accessories will restyle the same outfits into new looks — a lot of variety for almost no weight.");
+
+    const sug = [];
+    if (tops >= 2 && bottoms <= 1)
+      sug.push("Even out tops and bottoms — you've several tops but little to pair them with. One more neutral bottom (black trousers, a denim skirt) would roughly double your outfits.");
+    else if (bottoms >= 2 && tops <= 1)
+      sug.push("You've bottoms but few tops — a couple more plain tops would unlock far more outfits.");
+    if (statements >= 2)
+      sug.push("Pick one statement piece. Bold prints each need plain partners and won't mix with one another, so keeping one and making the rest plain opens up more combinations.");
+    if (accentSet.size >= 3)
+      sug.push(`You've ${accentSet.size} accent colours, which may not all mix. Dropping to two (plus your neutrals) keeps everything interchangeable.`);
+    if (layers === 0)
+      sug.push("Add a layer — a cardigan or light jacket ties outfits together and covers cool evenings, multiplying your looks.");
+    if (shoes === 0)
+      sug.push("Add shoes — there are none here yet. Two versatile pairs, one comfy and one smarter, cover most trips.");
+    if (accessories <= 1)
+      sug.push("Add a few accessories — a scarf, a belt, statement jewellery or sunglasses restyle the same clothes into fresh looks for almost no weight or space. They're the cheapest way to stretch a capsule.");
+    if (bottoms === 0 && dresses === 0)
+      sug.push("Nothing for your bottom half yet — add a versatile bottom or two.");
+    if (unknown.length)
+      sug.push(`Set the type on ${unknown.map(escapeHtml).join(", ")} so I can include ${unknown.length > 1 ? "them" : "it"}.`);
+
+    let html = `<div class="panel"><p class="summary">${summary}</p>`;
+    if (wins.length) html += `<p class="coach-h">What's working</p><ul class="coach-list">${wins.map(w => `<li>${w}</li>`).join("")}</ul>`;
+    if (sug.length)  html += `<p class="coach-h">You could</p><ul class="coach-list">${sug.map(s => `<li>${s}</li>`).join("")}</ul>`;
+    else             html += `<p class="coach-h">You could</p><ul class="coach-list"><li>Honestly, this is a tidy little capsule — nothing I'd change.</li></ul>`;
+    results.innerHTML = html + `</div>`;
+  }
+
+  // Save the coached wardrobe straight into "My saved lists"
+  function saveWardrobeAsList() {
+    if (!wardrobe.length) return;
+    const name = document.getElementById("wardListName").value.trim() || "My capsule";
+    const record = { name, items: wardrobe.map(w => w.name) };
+    const existing = templates.findIndex(t => t.name === name);
+    if (existing >= 0) templates[existing] = record; else templates.push(record);
+    saveJSON("packster_templates", templates);
+    document.getElementById("wardSaveMsg").textContent = `Saved "${name}" to your lists.`;
+  }
+
+  /* ---- Start fresh: wipe all saved data (two taps to confirm) ---- */
+  let resetArmed = false;
+  function startFresh() {
+    const btn = document.getElementById("resetBtn");
+    if (!resetArmed) {
+      resetArmed = true;                       // first tap just arms it
+      btn.textContent = "Tap again to erase everything";
+      btn.classList.add("armed");
+      setTimeout(() => {                        // disarm after a few seconds
+        resetArmed = false;
+        btn.textContent = "Start fresh";
+        btn.classList.remove("armed");
+      }, 4000);
+      return;
+    }
+    try {
+      ["packster", "packster_trips", "packster_templates", "packster_wardrobe"]
+        .forEach(k => localStorage.removeItem(k));
+    } catch (e) {}
+    location.reload();   // reload into a completely fresh app
+  }
+
+  /* ---- Start the app ---- */
+  drawChoice("styleChips",     Object.keys(travelStyles),   "travelStyle");
+  drawChoice("typeChips",      Object.keys(tripTypes),      "tripType");
+  renderActivities();
+  renderFamilyParty();
+  renderPets();
+  drawMulti("transportChips",  Object.keys(transportModes), "transports");
+  renderBagPicker();
+  // put any saved answers back into the text/date boxes
+  document.getElementById("destInput").value  = state.destination || "";
+  document.getElementById("startInput").value = state.startDate || "";
+  document.getElementById("endInput").value   = state.endDate || "";
+  refreshContinue();
+  renderSavedTrips();
+  render();
+  // If they already answered everything last time, skip straight to the planner.
+  if (state.travelStyle && state.tripType && state.destination && state.startDate
+      && state.endDate && state.bags.length && state.transports.length) {
+    goToPlanner();
+  }
+</script>
+
+<script>
+  /* Register the service worker so the app installs and works offline. */
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
