@@ -373,7 +373,7 @@
 
   <header>
     <h1>Tripkit</h1>
-    <p>Pack smart, travel light.</p>
+    <p>Pack smart, travel light &amp; always know where your towel is</p>
   </header>
 
   <!-- ============ SCREEN 1: THE WELCOME QUESTIONS ============ -->
@@ -428,6 +428,7 @@
 
     <div class="panel">
       <p class="question">4. What kind of trip?</p>
+      <p class="hint">Pick one or more — e.g. Rural and Camping together.</p>
       <div class="chips" id="typeChips"></div>
     </div>
 
@@ -452,6 +453,17 @@
       <p class="question">7. How are you travelling there?</p>
       <p class="hint">Pick all that apply — e.g. a flight, then a train.</p>
       <div class="chips" id="transportChips"></div>
+    </div>
+
+    <div class="panel">
+      <p class="question">Any occasion or theme? <span class="optional">(optional)</span></p>
+      <p class="hint">e.g. honeymoon, festival, birthday — we'll suggest a few fitting extras.</p>
+      <div id="themeTags" class="draft"></div>
+      <div class="adder" style="margin-top:12px;">
+        <input id="themeInput" placeholder="e.g. honeymoon, festival, birthday"
+               onkeydown="if(event.key==='Enter') addTheme()">
+        <button onclick="addTheme()">+</button>
+      </div>
     </div>
 
     <div class="panel">
@@ -518,7 +530,7 @@
       <input class="text-input" id="newListName" placeholder="List name, e.g. Toiletries">
       <div id="draftItems" class="draft"></div>
       <div class="adder" style="margin-top:12px;">
-        <input id="draftItemInput" placeholder="Add an item…"
+        <input id="draftItemInput" placeholder="Add an item, e.g. towel"
                onkeydown="if(event.key==='Enter') addDraftItem()">
         <button onclick="addDraftItem()">+</button>
       </div>
@@ -586,7 +598,7 @@
       { name: "Underwear", qty: "perDay" },
       { name: "Socks", qty: "perDay" },
     ],
-    "Keeping busy": [
+    "Entertainment": [
       // light defaults for downtime — switch this section off and add a saved
       // list instead (e.g. a "Knitting kit") when a hobby needs several items
       { name: "Book or e-reader", qty: "fixed" },
@@ -654,9 +666,9 @@
 
   // QUESTION 1 extras — each item folds into one of the fixed sections (`sec`).
   const travelStyles = {
-    "Alone":    [ { name: "Downloaded shows & podcasts", qty: "fixed", sec: "Keeping busy" } ],
-    "Group":    [ { name: "Portable speaker", qty: "fixed", sec: "Devices & Chargers" }, { name: "Card / travel games", qty: "fixed", sec: "Keeping busy" }, { name: "Snacks to share", qty: "fixed", sec: "Travel day items" } ],
-    "Family":   [ { name: "Kids' clothes", qty: "perDay", sec: "Wardrobe" }, { name: "Kids' snacks", qty: "fixed", sec: "Travel day items" }, { name: "Entertainment for kids", qty: "fixed", sec: "Keeping busy" }, { name: "Basic first-aid kit", qty: "fixed", sec: "Toiletries" } ],
+    "Alone":    [ { name: "Downloaded shows & podcasts", qty: "fixed", sec: "Entertainment" } ],
+    "Group":    [ { name: "Portable speaker", qty: "fixed", sec: "Devices & Chargers" }, { name: "Card / travel games", qty: "fixed", sec: "Entertainment" }, { name: "Snacks to share", qty: "fixed", sec: "Travel day items" } ],
+    "Family":   [ { name: "Kids' clothes", qty: "perDay", sec: "Wardrobe" }, { name: "Kids' snacks", qty: "fixed", sec: "Travel day items" }, { name: "Entertainment for kids", qty: "fixed", sec: "Entertainment" }, { name: "Basic first-aid kit", qty: "fixed", sec: "Toiletries" } ],
     "Business": [ { name: "Laptop + charger", qty: "fixed", sec: "Devices & Chargers" }, { name: "Formal outfit", qty: "perDay", sec: "Wardrobe" }, { name: "Dress shoes", qty: "fixed", sec: "Wardrobe" }, { name: "Notebook & pen", qty: "fixed", sec: "Devices & Chargers" } ],
   };
 
@@ -710,6 +722,24 @@
     "business": [ "Laptop + charger", "Smart outfit" ],
   };
 
+  // Occasions / themes (free text) → a few fitting extras. Matched by keyword,
+  // same idea as activities. Unrecognised themes simply add nothing.
+  const themeGear = {
+    "honeymoon":   [ "Dressy outfit", "Swimwear", "Camera", "Something special" ],
+    "romantic":    [ "Dressy outfit", "Nice fragrance" ],
+    "anniversary": [ "Dressy outfit", "Gift", "Nice fragrance" ],
+    "wedding":     [ "Formal outfit", "Dress shoes", "Gift" ],
+    "birthday":    [ "Gift", "Dressy outfit", "Card" ],
+    "festival":    [ "Earplugs", "Refillable water bottle", "Poncho", "Portable charger" ],
+    "concert":     [ "Earplugs", "Refillable water bottle" ],
+    "spa":         [ "Swimwear", "Sandals", "Light robe" ],
+    "knit":        [ "Knitting needles", "Yarn", "Pattern", "Project bag" ],
+    "craft":       [ "Project supplies", "Notebook" ],
+    "conference":  [ "Formal outfit", "Business cards", "Notebook & pen", "Laptop + charger" ],
+    "reunion":     [ "Dressy outfit", "Photos to share", "Gift" ],
+    "graduation":  [ "Formal outfit", "Gift", "Camera" ],
+  };
+
   /* ---- The app's memory (state) ---- */
   // A brand-new, empty trip. Used at startup and by "Start a new trip".
   function freshState() {
@@ -717,7 +747,8 @@
       travelStyle:    null,   // question 1 (just one)
       people:         [],     // for Family: who we're packing for
       pets:           [],     // any pets coming along
-      tripType:       null,   // question 2 (just one)
+      tripTypes:      [],     // question — one OR MORE kinds of trip
+      themes:         [],     // free-text occasions/themes (honeymoon, festival…)
       activities:     [],     // question 3 — free text
       destination:    "",     // question 4 — free text
       country:        null,    // derived from the destination (for entry docs)
@@ -757,8 +788,11 @@
   state.pets           = state.pets            || [];
   state.bagSizes       = state.bagSizes         || {};
   state.laundry        = state.laundry          || false;
+  state.themes         = state.themes           || [];
   // older trips stored a single `transport`; turn it into a list
   state.transports     = state.transports || (state.transport ? [state.transport] : []);
+  // older trips stored a single `tripType`; turn it into a list
+  state.tripTypes      = state.tripTypes || (state.tripType ? [state.tripType] : []);
   if (state.nextId == null) state.nextId = state.items.length;
   normalizeItems();
 
@@ -933,6 +967,25 @@
       `<span class="chip on" onclick="removeActivity(${i})">${escapeHtml(a)} ✕</span>`).join("");
   }
 
+  /* ---- Free-text occasions / themes (optional) ---- same pattern as activities */
+  function addTheme() {
+    const input = document.getElementById("themeInput");
+    const text = input.value.trim();
+    if (!text) return;
+    if (!state.themes.some(t => t.toLowerCase() === text.toLowerCase())) state.themes.push(text);
+    input.value = "";
+    renderThemes();
+    save();
+    document.getElementById("themeInput").focus();
+  }
+  function removeTheme(i) { state.themes.splice(i, 1); renderThemes(); save(); }
+  function renderThemes() {
+    const box = document.getElementById("themeTags");
+    if (!box) return;
+    box.innerHTML = (state.themes || []).map((t, i) =>
+      `<span class="chip on" onclick="removeTheme(${i})">${escapeHtml(t)} ✕</span>`).join("");
+  }
+
   /* ---- Family: who are we packing for? ----
      Shown only when travel style is "Family". Each person becomes their own
      packing section, so the list scales to the whole party. */
@@ -993,7 +1046,7 @@
 
   function refreshContinue() {
     const datesOk = state.startDate && state.endDate && state.endDate >= state.startDate;
-    const ready = state.travelStyle && state.tripType && state.destination
+    const ready = state.travelStyle && state.tripTypes.length > 0 && state.destination
                   && datesOk && state.bags.length > 0 && state.transports.length > 0;
     document.getElementById("continueBtn").disabled = !ready;
   }
@@ -1258,11 +1311,13 @@
     const list = ["Travel Documents", "Toiletries"];
     if (family) state.people.forEach(p => list.push(p.name));   // a section per person
     else        list.push("Underwear & Socks", "Wardrobe");
-    list.push("Keeping busy");
+    list.push("Entertainment");
     if ((state.pets || []).length) list.push("Pets");
     list.push("Devices & Chargers");
-    if (state.tripType) list.push(state.tripType + " Gear");
+    // one "{Type} Gear" section per chosen trip type, in a stable order
+    Object.keys(tripTypes).forEach(tp => { if (state.tripTypes.includes(tp)) list.push(tp + " Gear"); });
     if (state.activities.length) list.push("Activity Gear");
+    if ((state.themes || []).length) list.push("Occasions / Themes");
     if (state.transports.length) list.push("Travel day items");
     list.push("Weather Gear");
     if (!family) list.push("Outer wear");   // for a family, each person's section holds their layers
@@ -1299,7 +1354,6 @@
     // sections (e.g. the single-traveller Wardrobe on a family trip) never leak items.
     const sections = tripSections();
     const include = name => sections.includes(name) && !(state.skip || []).includes(name);
-    const typeSection = state.tripType + " Gear";   // e.g. "Rural Gear"
     const family = isFamilyParty();
 
     const collected = [];
@@ -1348,9 +1402,20 @@
       if (include(item.sec)) collected.push({ category: item.sec, ...item });
     });
 
-    // trip-type gear → "{Type} Gear"
-    if (include(typeSection)) tripTypes[state.tripType].forEach(item =>
-      collected.push({ category: typeSection, ...item }));
+    // trip-type gear → one "{Type} Gear" section per chosen type. A shared item
+    // (e.g. a tent from both Rural and Camping) is kept once, under the first type.
+    const typeSeen = new Set();
+    Object.keys(tripTypes).forEach(tp => {
+      if (!state.tripTypes.includes(tp)) return;
+      const sec = tp + " Gear";
+      if (!include(sec)) return;
+      tripTypes[tp].forEach(item => {
+        const k = normName(item.name);
+        if (typeSeen.has(k)) return;
+        typeSeen.add(k);
+        collected.push({ category: sec, ...item });
+      });
+    });
 
     // Activity Gear — the kit your chosen activities need (from recognised keywords).
     // Skip anything already suggested by another section (e.g. a Beach trip already
@@ -1373,6 +1438,27 @@
         if (seenAct.has(k) || matchesExisting(k)) return false;
         seenAct.add(k); return true;
       }).forEach(name => collected.push({ category: "Activity Gear", name, qty: "fixed" }));
+    }
+
+    // Occasions / Themes — extras for the occasion (honeymoon, festival…),
+    // de-duped against everything already suggested.
+    if (include("Occasions / Themes")) {
+      const already = collected.map(i => normName(i.name));
+      const loose = (a, b) => a === b || (Math.min(a.length, b.length) >= 4 && (a.includes(b) || b.includes(a)));
+      const matchesExisting = k => already.some(o => loose(o, k));
+      const names = [];
+      (state.themes || []).forEach(theme => {
+        const lower = theme.toLowerCase();
+        for (const key in themeGear) {
+          if (lower.includes(key)) themeGear[key].forEach(n => names.push(n));
+        }
+      });
+      const seen = new Set();
+      names.filter(n => {
+        const k = normName(n);
+        if (seen.has(k) || matchesExisting(k)) return false;
+        seen.add(k); return true;
+      }).forEach(name => collected.push({ category: "Occasions / Themes", name, qty: "fixed" }));
     }
 
     // Travel day items (everything for the journey itself)
@@ -1431,7 +1517,7 @@
 
     let html = "";
     if (complete) {
-      html += `<div class="done-banner">🎉 All packed — you're ready to go!</div>`;
+      html += `<div class="done-banner">Towel? Check. Everything else? Check. Don't panic ... you're ready!</div>`;
     }
     html += `<div class="progress-wrap">
         <div class="bar"><span style="width:${pct}%"></span></div>
@@ -1714,9 +1800,11 @@
 
   function loadTrip(index) {
     state = copyOf(savedTrips[index].data);   // load a fresh copy, not the original
-    // a trip saved before this change may still have a single `transport`
+    // a trip saved before these changes may still have single values / missing fields
     state.transports = state.transports || (state.transport ? [state.transport] : []);
+    state.tripTypes  = state.tripTypes  || (state.tripType ? [state.tripType] : []);
     state.activities = state.activities || [];
+    state.themes     = state.themes     || [];
     normalizeItems();
     save();
     syncWelcomeUI();    // make the question screen match the loaded trip
@@ -1759,8 +1847,9 @@
   // Redraw the welcome controls to match the current state (used after loading a trip)
   function syncWelcomeUI() {
     drawChoice("styleChips",     Object.keys(travelStyles),   "travelStyle");
-    drawChoice("typeChips",      Object.keys(tripTypes),      "tripType");
+    drawMulti("typeChips",       Object.keys(tripTypes),      "tripTypes");
     renderActivities();
+    renderThemes();
     renderFamilyParty();
     renderPets();
     drawMulti("transportChips",  Object.keys(transportModes), "transports");
@@ -2078,8 +2167,9 @@
 
   /* ---- Start the app ---- */
   drawChoice("styleChips",     Object.keys(travelStyles),   "travelStyle");
-  drawChoice("typeChips",      Object.keys(tripTypes),      "tripType");
+  drawMulti("typeChips",       Object.keys(tripTypes),      "tripTypes");
   renderActivities();
+  renderThemes();
   renderFamilyParty();
   renderPets();
   drawMulti("transportChips",  Object.keys(transportModes), "transports");
@@ -2094,7 +2184,7 @@
   renderSavedTrips();
   render();
   // If they already answered everything last time, skip straight to the planner.
-  if (state.travelStyle && state.tripType && state.destination && state.startDate
+  if (state.travelStyle && state.tripTypes.length && state.destination && state.startDate
       && state.endDate && state.bags.length && state.transports.length) {
     goToPlanner();
   }
