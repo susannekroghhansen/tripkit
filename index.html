@@ -364,6 +364,10 @@
     -webkit-background-clip: text; background-clip: text; color: transparent;
   }
   .celebrate-sub { color: var(--ink); font-size: 1.02rem; line-height: 1.5; margin: 0 0 22px; }
+  .confirm-title {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 1.45rem;
+    color: var(--ink); margin: 0 0 10px;
+  }
   .celebrate-btn { width: 100%; }
   @keyframes overlayfade { from { opacity: 0; } to { opacity: 1; } }
   @keyframes cardpop { from { opacity: 0; transform: scale(.85) translateY(10px); } to { opacity: 1; transform: none; } }
@@ -996,9 +1000,13 @@
     state.wantWardrobe = true;
     save();
     await buildList();   // builds the capsule into Wardrobe + Outer wear
-    if (confirm("Wardrobe added ✨\n\nWould you like to add your own items and fine-tune it in the Capsule Coach?")) {
-      goToCoach();
-    }
+    showConfirm({
+      title: "Wardrobe added ✨",
+      message: "Want to add your own items and fine-tune it in the Capsule Coach?",
+      confirmLabel: "Open Capsule Coach",
+      cancelLabel: "Not now",
+      onConfirm: goToCoach,
+    });
   }
   // Populate the "add wardrobe from a saved list" control.
   function fillWardrobeListPicker() {
@@ -1902,6 +1910,34 @@
   }
 
   let escHandler = null;
+  let escHandlerConfirm = null;
+  /* ---- A styled yes/no modal (matches the celebration card) ---- */
+  function showConfirm(opts) {
+    if (document.getElementById("confirmOverlay")) return;
+    const overlay = document.createElement("div");
+    overlay.className = "celebrate-overlay";
+    overlay.id = "confirmOverlay";
+    overlay.innerHTML =
+      `<div class="celebrate-card" role="dialog" aria-modal="true">
+         <h2 class="confirm-title">${escapeHtml(opts.title || "")}</h2>
+         <p class="celebrate-sub">${escapeHtml(opts.message || "")}</p>
+         <button class="btn confirm-yes" type="button">${escapeHtml(opts.confirmLabel || "OK")}</button>
+         <button class="btn-secondary confirm-no" type="button" style="margin-top:10px;">${escapeHtml(opts.cancelLabel || "Not now")}</button>
+       </div>`;
+    document.body.appendChild(overlay);
+    const close = () => {
+      if (escHandlerConfirm) { document.removeEventListener("keydown", escHandlerConfirm); escHandlerConfirm = null; }
+      overlay.classList.add("closing");
+      setTimeout(() => overlay.remove(), 200);
+    };
+    overlay.querySelector(".confirm-yes").addEventListener("click", () => { close(); if (opts.onConfirm) opts.onConfirm(); });
+    overlay.querySelector(".confirm-no").addEventListener("click", close);
+    overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
+    escHandlerConfirm = e => { if (e.key === "Escape") close(); };
+    document.addEventListener("keydown", escHandlerConfirm);
+    overlay.querySelector(".confirm-yes").focus();
+  }
+
   /* ---- The "you are ready" celebration overlay ---- */
   function showCelebration() {
     if (document.getElementById("celebrateOverlay")) return;   // already showing
