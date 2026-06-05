@@ -312,14 +312,33 @@
   .reset-link { display: block; margin: 20px auto 0; color: var(--muted); font-size: 0.85rem; }
   .reset-link.armed { color: var(--coral); font-weight: 600; }
 
-  /* NEW: all-packed celebration */
-  .done-banner {
-    background: linear-gradient(120deg, var(--teal), var(--sky));
-    color: #fff; text-align: center; font-weight: 600;
-    font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem;
-    border-radius: 14px; padding: 14px 16px; margin: 0 0 16px;
-    box-shadow: 0 6px 18px rgba(19,139,147,0.25);
+  /* NEW: all-packed celebration overlay */
+  .celebrate-overlay {
+    position: fixed; inset: 0; z-index: 9000;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: rgba(23, 58, 68, 0.55); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+    animation: overlayfade .2s ease both;
   }
+  .celebrate-overlay.closing { animation: overlayfade .2s ease both reverse; }
+  .celebrate-card {
+    background: var(--card); border-radius: 22px; padding: 32px 26px 26px;
+    max-width: 360px; width: 100%; text-align: center;
+    box-shadow: 0 24px 60px rgba(23, 58, 68, 0.35);
+    animation: cardpop .35s cubic-bezier(.2, .8, .25, 1) both;
+  }
+  .celebrate-title {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 2rem; margin: 0 0 12px;
+    background: linear-gradient(120deg, var(--teal), var(--sky));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .celebrate-sub { color: var(--ink); font-size: 1.02rem; line-height: 1.5; margin: 0 0 22px; }
+  .celebrate-btn { width: 100%; }
+  @keyframes overlayfade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes cardpop { from { opacity: 0; transform: scale(.85) translateY(10px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .celebrate-card { animation: overlayfade .2s ease both; }   /* fade in, no pop */
+  }
+  /* confetti sits ABOVE the overlay so it rains over the card */
   .confetti-canvas {
     position: fixed; inset: 0; width: 100%; height: 100%;
     pointer-events: none; z-index: 9999;
@@ -1515,11 +1534,7 @@
     const pct    = total ? Math.round((packed / total) * 100) : 0;
     const complete = total > 0 && packed === total;
 
-    let html = "";
-    if (complete) {
-      html += `<div class="done-banner">Towel? Check. Everything else? Check. Don't panic ... you're ready!</div>`;
-    }
-    html += `<div class="progress-wrap">
+    let html = `<div class="progress-wrap">
         <div class="bar"><span style="width:${pct}%"></span></div>
         <small>${packed} / ${total} packed</small>
       </div>`;
@@ -1611,12 +1626,40 @@
     initDnD();   // make the freshly-drawn items draggable
 
     // Celebrate the moment the LAST item gets ticked (not on every redraw).
-    if (complete && !wasComplete) launchConfetti();
+    if (complete && !wasComplete) { launchConfetti(); showCelebration(); }
     wasComplete = complete;
   }
 
   // Remembers whether the list was already complete, so confetti fires once.
   let wasComplete = false;
+
+  let escHandler = null;
+  /* ---- The "you are ready" celebration overlay ---- */
+  function showCelebration() {
+    if (document.getElementById("celebrateOverlay")) return;   // already showing
+    const overlay = document.createElement("div");
+    overlay.className = "celebrate-overlay";
+    overlay.id = "celebrateOverlay";
+    overlay.innerHTML =
+      `<div class="celebrate-card" role="dialog" aria-modal="true" aria-label="All packed">
+         <h2 class="celebrate-title">You are ready</h2>
+         <p class="celebrate-sub">Towel? Check. Everything else? Check. Don't panic … you are ready to go.</p>
+         <button class="btn celebrate-btn" type="button">Let's go</button>
+       </div>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector(".celebrate-btn").addEventListener("click", closeCelebration);
+    overlay.addEventListener("click", e => { if (e.target === overlay) closeCelebration(); });
+    escHandler = e => { if (e.key === "Escape") closeCelebration(); };
+    document.addEventListener("keydown", escHandler);
+    overlay.querySelector(".celebrate-btn").focus();
+  }
+  function closeCelebration() {
+    const overlay = document.getElementById("celebrateOverlay");
+    if (!overlay) return;
+    if (escHandler) { document.removeEventListener("keydown", escHandler); escHandler = null; }
+    overlay.classList.add("closing");
+    setTimeout(() => overlay.remove(), 200);
+  }
 
   /* ---- A self-contained confetti burst (no library, works offline) ---- */
   function launchConfetti() {
