@@ -347,6 +347,19 @@
   /* NEW: family people editor */
   .toggle-row { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; cursor: pointer; font-size: 0.92rem; line-height: 1.4; }
   .toggle-row input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--teal); flex: none; }
+
+  /* NEW: opt-in sustainability tips */
+  .eco-foot { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .eco-foot .toggle-row { margin-top: 0; }
+  .eco-panel {
+    margin-top: 14px; padding: 18px 18px 16px; border-radius: 16px;
+    background: rgba(33, 179, 189, 0.08); border: 1px solid rgba(33, 179, 189, 0.25);
+  }
+  .eco-title { font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--teal); margin: 0 0 8px; }
+  .eco-travel { color: var(--ink); font-size: 0.95rem; line-height: 1.5; margin: 0 0 12px; }
+  .eco-tips { margin: 0 0 12px; padding-left: 20px; color: var(--ink); font-size: 0.95rem; line-height: 1.55; }
+  .eco-tips li { margin-bottom: 5px; }
+  .eco-note { color: var(--muted); font-size: 0.82rem; font-style: italic; margin: 0; }
   .optional { font-weight: 400; color: var(--muted); font-size: 0.85rem; }
   .sub-q { font-weight: 600; color: var(--ink); margin: 14px 0 8px; font-size: 0.95rem; }
   .person-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
@@ -446,13 +459,19 @@
     </div>
 
     <div class="panel">
-      <p class="question">4. What kind of trip?</p>
+      <p class="question">4. Where are you staying?</p>
+      <p class="hint">Helps us add what you'll need — and skip what's provided.</p>
+      <div class="chips" id="stayChips"></div>
+    </div>
+
+    <div class="panel">
+      <p class="question">5. What kind of trip?</p>
       <p class="hint">Pick one or more — e.g. Rural and Camping together.</p>
       <div class="chips" id="typeChips"></div>
     </div>
 
     <div class="panel">
-      <p class="question">5. What will you do there?</p>
+      <p class="question">6. What will you do there?</p>
       <p class="hint">Add your own activities — we'll suggest gear where we can.</p>
       <div id="activityTags" class="draft"></div>
       <div class="adder" style="margin-top:12px;">
@@ -463,13 +482,13 @@
     </div>
 
     <div class="panel">
-      <p class="question">6. What are you packing into?</p>
+      <p class="question">7. What are you packing into?</p>
       <p class="hint">Pick one or more — we'll estimate whether it all fits.</p>
       <div id="bagChips"></div>
     </div>
 
     <div class="panel">
-      <p class="question">7. How are you travelling there?</p>
+      <p class="question">8. How are you travelling there?</p>
       <p class="hint">Pick all that apply — e.g. a flight, then a train.</p>
       <div class="chips" id="transportChips"></div>
     </div>
@@ -691,6 +710,18 @@
     "Business": [ { name: "Laptop + charger", qty: "fixed", sec: "Devices & Chargers" }, { name: "Formal outfit", qty: "perDay", sec: "Wardrobe" }, { name: "Dress shoes", qty: "fixed", sec: "Wardrobe" }, { name: "Notebook & pen", qty: "fixed", sec: "Devices & Chargers" } ],
   };
 
+  // QUESTION 4 — where you're staying. `add` items go into a "For your stay"
+  // section; `skipHint` names (loosely matched) are trimmed from the suggestions
+  // because the accommodation usually provides them. We *adjust*, never force —
+  // budget places vary, so these are gentle defaults, not hard rules.
+  const staySetup = {
+    "Hotel / B&B":        { add: [], skipHint: ["shampoo"], note: "Hotels usually provide towels, linens & basic toiletries — we've trimmed those." },
+    "Friends or family":  { add: [ "Gift for your hosts" ], skipHint: [] },
+    "Airbnb / rental":    { add: [ "Bath towel", "Travel toiletries", "Tea towel", "Reusable shopping bag" ], skipHint: [] },
+    "Summer house / cabin": { add: [ "Bath towel", "Bed linen", "Tea towel", "Bin bags", "Basic groceries" ], skipHint: [] },
+    "Hostel":             { add: [ "Travel towel", "Padlock", "Flip-flops for showers", "Earplugs" ], skipHint: [] },
+  };
+
   // Answers to QUESTION 2 add their own extras.
   const tripTypes = {
     "City":     [ { name: "Comfortable shoes", qty: "fixed" }, { name: "Day bag", qty: "fixed" }, { name: "Reusable water bottle", qty: "fixed" } ],
@@ -739,6 +770,18 @@
     "shop":     [ "Foldable tote bag" ],
     "work":     [ "Laptop + charger", "Notebook" ],
     "business": [ "Laptop + charger", "Smart outfit" ],
+    // Dress for visiting religious sites — a factual, respectful reminder tied to
+    // the activity, not a claim about any country. Many sites ask for covered
+    // shoulders & knees; a scarf or long layer covers most cases.
+    "mosque":    [ "Scarf or shawl (cover hair & shoulders)", "Long trousers or skirt" ],
+    "temple":    [ "Scarf or shawl (cover shoulders)", "Long trousers or skirt" ],
+    "shrine":    [ "Scarf or shawl (cover shoulders)", "Long trousers or skirt" ],
+    "church":    [ "Top that covers shoulders", "Long trousers or skirt" ],
+    "cathedral": [ "Top that covers shoulders", "Long trousers or skirt" ],
+    "vatican":   [ "Top that covers shoulders", "Long trousers or skirt" ],
+    "synagogue": [ "Head covering", "Modest top & bottoms" ],
+    "religi":    [ "Modest layer (cover shoulders & knees)" ],
+    "worship":   [ "Modest layer (cover shoulders & knees)" ],
   };
 
   // Occasions / themes (free text) → a few fitting extras. Matched by keyword,
@@ -767,6 +810,8 @@
       people:         [],     // for Family: who we're packing for
       pets:           [],     // any pets coming along
       tripTypes:      [],     // question — one OR MORE kinds of trip
+      stay:           null,   // question 4 — where you're staying
+      eco:            false,  // opt-in sustainability tips (off by default)
       themes:         [],     // free-text occasions/themes (honeymoon, festival…)
       activities:     [],     // question 3 — free text
       destination:    "",     // question 4 — free text
@@ -808,6 +853,8 @@
   state.bagSizes       = state.bagSizes         || {};
   state.laundry        = state.laundry          || false;
   state.themes         = state.themes           || [];
+  if (state.stay === undefined) state.stay = null;
+  state.eco            = state.eco             || false;
   // older trips stored a single `transport`; turn it into a list
   state.transports     = state.transports || (state.transport ? [state.transport] : []);
   // older trips stored a single `tripType`; turn it into a list
@@ -1065,7 +1112,7 @@
 
   function refreshContinue() {
     const datesOk = state.startDate && state.endDate && state.endDate >= state.startDate;
-    const ready = state.travelStyle && state.tripTypes.length > 0 && state.destination
+    const ready = state.travelStyle && state.stay && state.tripTypes.length > 0 && state.destination
                   && datesOk && state.bags.length > 0 && state.transports.length > 0;
     document.getElementById("continueBtn").disabled = !ready;
   }
@@ -1328,6 +1375,7 @@
   function tripSections() {
     const family = isFamilyParty();
     const list = ["Travel Documents", "Toiletries"];
+    if (state.stay && staySetup[state.stay] && staySetup[state.stay].add.length) list.push("For your stay");
     if (family) state.people.forEach(p => list.push(p.name));   // a section per person
     else        list.push("Underwear & Socks", "Wardrobe");
     list.push("Entertainment");
@@ -1381,6 +1429,17 @@
     // base sections (Travel Documents, Toiletries, Devices & Chargers, Underwear & Socks)
     for (const sectionName in baseItems) {
       if (include(sectionName)) baseItems[sectionName].forEach(item => collected.push({ category: sectionName, ...item }));
+    }
+
+    // Accommodation extras → "For your stay" (towels for a rental, a host gift, etc.)
+    if (include("For your stay") && state.stay && staySetup[state.stay]) {
+      staySetup[state.stay].add.forEach(name => collected.push({ category: "For your stay", name, qty: "fixed" }));
+    }
+    if (state.stay && staySetup[state.stay] && staySetup[state.stay].note) {
+      // a stay with extras shows the note on its own section; a hotel (no extras)
+      // shows it on Toiletries, since that's what gets trimmed
+      const target = staySetup[state.stay].add.length ? "For your stay" : "Toiletries";
+      state.notes[target] = staySetup[state.stay].note;
     }
 
     // Destination-specific entry authorisation (e.g. UK ETA, US ESTA), if any.
@@ -1488,6 +1547,17 @@
     if (include("Weather Gear")) weatherItems(state.weather).forEach(item =>
       collected.push({ category: "Weather Gear", ...item }));
 
+    // Accommodation usually provides some things — trim those from the suggestions
+    // (a gentle default; the user can always add them back by hand).
+    const skipHints = (state.stay && staySetup[state.stay]) ? staySetup[state.stay].skipHint : [];
+    let collectedTrimmed = collected;
+    if (skipHints.length) {
+      collectedTrimmed = collected.filter(item => {
+        const n = normName(item.name);
+        return !skipHints.some(h => n.includes(normName(h)));
+      });
+    }
+
     // YOUR ITEMS WIN: drop any suggestion you've already added yourself.
     const owned = customItems.map(i => normName(i.name));
     const isOwned = name => {
@@ -1495,7 +1565,7 @@
       return owned.some(o => o === g || (o.length >= 4 && (o.includes(g) || g.includes(o))));
     };
 
-    const generated = collected.filter(item => !isOwned(item.name)).map(item => {
+    const generated = collectedTrimmed.filter(item => !isOwned(item.name)).map(item => {
       const count = item.qty === "perDay" ? perDayCount(state.nights)
                   : (typeof item.qty === "number" ? item.qty : 1);
       const vol   = +(count * unitVolume(item.name)).toFixed(1);
@@ -1622,6 +1692,15 @@
         <button onclick="addSectionFromInput()">+ Section</button>
       </div>`;
 
+    // Opt-in sustainability tips — off by default, never preachy.
+    html += `<div class="eco-foot">
+        <label class="toggle-row">
+          <input type="checkbox" ${state.eco ? "checked" : ""} onchange="toggleEco(this.checked)">
+          <span>🌱 Show sustainability tips <span class="optional">(packing & travel — rough guidance)</span></span>
+        </label>
+      </div>`;
+    if (state.eco) html += ecoPanelHtml();
+
     out.innerHTML = html;
     initDnD();   // make the freshly-drawn items draggable
 
@@ -1632,6 +1711,46 @@
 
   // Remembers whether the list was already complete, so confetti fires once.
   let wasComplete = false;
+
+  /* ---- Sustainability tips (opt-in) ----
+     Constructive, never judgemental, and honest that any footprint hint is a
+     rough estimate, not a calculation. Off by default; the user turns it on. */
+  function toggleEco(on) { state.eco = !!on; save(); render(); }
+
+  function ecoPanelHtml() {
+    // A light, qualitative transport note — we don't know distances, so we don't
+    // pretend to. Flag the highest-impact mode chosen, and praise low-carbon ones.
+    const t = state.transports || [];
+    let travelLine;
+    if (t.includes("Airplane")) {
+      travelLine = "Flights are usually the largest part of a trip's footprint. If part of the journey works by train or coach, that's much lower — and direct flights beat connecting ones.";
+    } else if (t.includes("Car")) {
+      travelLine = "Sharing the car, or combining errands into the trip, cuts the per-person impact. An EV or a full car helps too.";
+    } else if (t.includes("Ship")) {
+      travelLine = "Ferries vary a lot; foot-passenger travel is lighter than taking a car aboard.";
+    } else if (t.length) {
+      travelLine = "Train, coach, bike and walking are among the lowest-carbon ways to travel — nice choice.";
+    } else {
+      travelLine = "Lower-carbon travel (train, coach, bike) makes the biggest single difference to a trip's footprint.";
+    }
+
+    const tips = [
+      "Pack a refillable water bottle and a foldable tote — saves buying single-use ones there.",
+      "Choose solid or refillable toiletries over travel minis — less plastic, and no liquids limit.",
+      "Pack versatile layers you can mix — a lighter bag is less to haul (and to fuel).",
+      "Take a spare bag for laundry or shopping, so you don't grab plastic ones.",
+    ];
+    if (state.tripTypes.includes("Beach") || (state.activities || []).some(a => /swim|snork|dive|reef/i.test(a))) {
+      tips.push("Reef-safe sunscreen protects marine life where you'll be swimming.");
+    }
+
+    return `<div class="eco-panel">
+        <p class="eco-title">🌱 A few ways to tread lighter</p>
+        <p class="eco-travel">${escapeHtml(travelLine)}</p>
+        <ul class="eco-tips">${tips.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+        <p class="eco-note">These are general suggestions and rough estimates, not a precise calculation.</p>
+      </div>`;
+  }
 
   let escHandler = null;
   /* ---- The "you are ready" celebration overlay ---- */
@@ -1848,6 +1967,8 @@
     state.tripTypes  = state.tripTypes  || (state.tripType ? [state.tripType] : []);
     state.activities = state.activities || [];
     state.themes     = state.themes     || [];
+    if (state.stay === undefined) state.stay = null;
+    state.eco        = state.eco        || false;
     normalizeItems();
     save();
     syncWelcomeUI();    // make the question screen match the loaded trip
@@ -1890,6 +2011,7 @@
   // Redraw the welcome controls to match the current state (used after loading a trip)
   function syncWelcomeUI() {
     drawChoice("styleChips",     Object.keys(travelStyles),   "travelStyle");
+    drawChoice("stayChips",      Object.keys(staySetup),      "stay");
     drawMulti("typeChips",       Object.keys(tripTypes),      "tripTypes");
     renderActivities();
     renderThemes();
@@ -2210,6 +2332,7 @@
 
   /* ---- Start the app ---- */
   drawChoice("styleChips",     Object.keys(travelStyles),   "travelStyle");
+  drawChoice("stayChips",      Object.keys(staySetup),      "stay");
   drawMulti("typeChips",       Object.keys(tripTypes),      "tripTypes");
   renderActivities();
   renderThemes();
@@ -2227,7 +2350,7 @@
   renderSavedTrips();
   render();
   // If they already answered everything last time, skip straight to the planner.
-  if (state.travelStyle && state.tripTypes.length && state.destination && state.startDate
+  if (state.travelStyle && state.stay && state.tripTypes.length && state.destination && state.startDate
       && state.endDate && state.bags.length && state.transports.length) {
     goToPlanner();
   }
