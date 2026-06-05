@@ -1,7 +1,7 @@
 /* Tripkit service worker.
    Bump CACHE on every release so old cached files are cleared and users get
    the new version. This single line is your "publish a new version" switch. */
-const CACHE = "tripkit-v2";
+const CACHE = "tripkit-v6";
 
 // The app's own files, cached so it loads instantly and works offline.
 const ASSETS = [

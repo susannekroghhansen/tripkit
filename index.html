@@ -312,7 +312,22 @@
   .reset-link { display: block; margin: 20px auto 0; color: var(--muted); font-size: 0.85rem; }
   .reset-link.armed { color: var(--coral); font-weight: 600; }
 
+  /* NEW: all-packed celebration */
+  .done-banner {
+    background: linear-gradient(120deg, var(--teal), var(--sky));
+    color: #fff; text-align: center; font-weight: 600;
+    font-family: 'Space Grotesk', sans-serif; font-size: 1.05rem;
+    border-radius: 14px; padding: 14px 16px; margin: 0 0 16px;
+    box-shadow: 0 6px 18px rgba(19,139,147,0.25);
+  }
+  .confetti-canvas {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 9999;
+  }
+
   /* NEW: family people editor */
+  .toggle-row { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; cursor: pointer; font-size: 0.92rem; line-height: 1.4; }
+  .toggle-row input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--teal); flex: none; }
   .optional { font-weight: 400; color: var(--muted); font-size: 0.85rem; }
   .sub-q { font-weight: 600; color: var(--ink); margin: 14px 0 8px; font-size: 0.95rem; }
   .person-row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
@@ -392,6 +407,10 @@
         <label>To<input type="date" id="endInput"
                onchange="setEndDate(this.value)"></label>
       </div>
+      <label class="toggle-row">
+        <input type="checkbox" id="laundryToggle" onchange="setLaundry(this.checked)">
+        <span>I'll be able to do laundry on this trip <span class="optional">(packs fewer of the daily items on long trips)</span></span>
+      </label>
     </div>
 
     <div class="panel">
@@ -621,6 +640,7 @@
     "Sports bag":      { sizes: { "Small": 30, "Medium": 40, "Large": 55 }, default: "Medium" },
     "Cabin suitcase":  40,
     "Checked suitcase":{ sizes: { "Medium": 70, "Large": 95 }, default: "Large" },
+    "Pet carrier":     { sizes: { "Cabin": 15, "Large": 40 }, default: "Cabin" },   // only shown when a pet is added
   };
 
   // Usable capacity (litres) of one chosen bag, honouring its selected size.
@@ -704,6 +724,7 @@
       countryCode:    null,    // ISO code, e.g. "GB"
       startDate:      "",     // question 5 — "YYYY-MM-DD"
       endDate:        "",     // question 5
+      laundry:        false,   // can you do laundry on the trip? caps per-day items
       transports:     [],     // question 7 — one OR MORE
       nights:         3,      // calculated from the dates
       bags:           [],     // question 6 — one OR MORE
@@ -735,6 +756,7 @@
   state.people         = state.people          || [];
   state.pets           = state.pets            || [];
   state.bagSizes       = state.bagSizes         || {};
+  state.laundry        = state.laundry          || false;
   // older trips stored a single `transport`; turn it into a list
   state.transports     = state.transports || (state.transport ? [state.transport] : []);
   if (state.nextId == null) state.nextId = state.items.length;
@@ -852,7 +874,14 @@
   function renderBagPicker() {
     const box = document.getElementById("bagChips");
     if (!box) return;
-    const chips = Object.keys(bagOptions).map(name =>
+    const hasPet = (state.pets || []).length > 0;
+    // "Pet carrier" only makes sense with a pet — drop it if the pet's gone
+    if (!hasPet && state.bags.includes("Pet carrier")) {
+      state.bags = state.bags.filter(b => b !== "Pet carrier");
+      if (state.bagSizes) delete state.bagSizes["Pet carrier"];
+    }
+    const options = Object.keys(bagOptions).filter(name => name !== "Pet carrier" || hasPet);
+    const chips = options.map(name =>
       `<button class="chip ${state.bags.includes(name) ? "on" : ""}" onclick="toggleBag('${name}')">${escapeHtml(name)}</button>`
     ).join("");
     // size selectors for any selected bag that has sizes
@@ -956,9 +985,9 @@
     state.pets = state.pets || [];
     const n = state.pets.filter(p => p.kind === kind).length + 1;
     state.pets.push({ name: kind + " " + n, kind });
-    save(); renderPets();
+    save(); renderPets(); renderBagPicker();   // the carrier option depends on having a pet
   }
-  function removePet(i) { state.pets.splice(i, 1); save(); renderPets(); }
+  function removePet(i) { state.pets.splice(i, 1); save(); renderPets(); renderBagPicker(); }
   function renamePet(i, value) { state.pets[i].name = value; save(); }
   function setPetKind(i, value) { state.pets[i].kind = value; save(); renderPets(); }
 
@@ -976,6 +1005,14 @@
     const ms    = end - start;                       // difference in milliseconds
     return Math.max(1, Math.round(ms / 86400000));   // 86,400,000 ms = one day
   }
+
+  // How many of a "per day" item to pack. With laundry on a long trip you don't
+  // need one per night — cap at about a week's worth plus the wash cycle.
+  const LAUNDRY_CAP = 7;
+  function perDayCount(nights) {
+    return state.laundry ? Math.min(nights, LAUNDRY_CAP) : nights;
+  }
+  function setLaundry(v) { state.laundry = !!v; save(); }
 
   // Today's date as "YYYY-MM-DD" in the user's own timezone (not UTC).
   function todayISO() {
@@ -1354,7 +1391,7 @@
     };
 
     const generated = collected.filter(item => !isOwned(item.name)).map(item => {
-      const count = item.qty === "perDay" ? state.nights
+      const count = item.qty === "perDay" ? perDayCount(state.nights)
                   : (typeof item.qty === "number" ? item.qty : 1);
       const vol   = +(count * unitVolume(item.name)).toFixed(1);
       return { id: state.nextId++, category: item.category, name: item.name, count, packed: false, vol };
@@ -1390,8 +1427,13 @@
     const packed = state.items.filter(i => i.packed).length;
     const total  = state.items.length;
     const pct    = total ? Math.round((packed / total) * 100) : 0;
+    const complete = total > 0 && packed === total;
 
-    let html = `<div class="progress-wrap">
+    let html = "";
+    if (complete) {
+      html += `<div class="done-banner">🎉 All packed — you're ready to go!</div>`;
+    }
+    html += `<div class="progress-wrap">
         <div class="bar"><span style="width:${pct}%"></span></div>
         <small>${packed} / ${total} packed</small>
       </div>`;
@@ -1481,6 +1523,58 @@
 
     out.innerHTML = html;
     initDnD();   // make the freshly-drawn items draggable
+
+    // Celebrate the moment the LAST item gets ticked (not on every redraw).
+    if (complete && !wasComplete) launchConfetti();
+    wasComplete = complete;
+  }
+
+  // Remembers whether the list was already complete, so confetti fires once.
+  let wasComplete = false;
+
+  /* ---- A self-contained confetti burst (no library, works offline) ---- */
+  function launchConfetti() {
+    // respect users who prefer reduced motion — the banner is enough for them
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.className = "confetti-canvas";
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width = window.innerWidth;
+    const H = canvas.height = window.innerHeight;
+    const colors = ["#F0795B", "#138B93", "#2C9CD8", "#21B3BD", "#E0604A", "#F3E8D6"];
+
+    const parts = Array.from({ length: 150 }, (_, i) => ({
+      x: Math.random() * W,
+      y: -20 - Math.random() * H * 0.5,
+      r: 5 + Math.random() * 7,
+      c: colors[i % colors.length],
+      vx: -1.6 + Math.random() * 3.2,
+      vy: 2 + Math.random() * 3.5,
+      rot: Math.random() * Math.PI,
+      vr: -0.2 + Math.random() * 0.4,
+    }));
+
+    const start = performance.now();
+    const DURATION = 2600;
+    function frame(now) {
+      const t = now - start;
+      ctx.clearRect(0, 0, W, H);
+      ctx.globalAlpha = Math.max(0, 1 - t / DURATION);   // fade out near the end
+      parts.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.03; p.rot += p.vr;   // gentle gravity
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.c;
+        ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.6);
+        ctx.restore();
+      });
+      if (t < DURATION) requestAnimationFrame(frame);
+      else canvas.remove();
+    }
+    requestAnimationFrame(frame);
   }
 
   /* ---- Drag and drop (powered by the SortableJS library) ----
@@ -1674,6 +1768,7 @@
     document.getElementById("destInput").value  = state.destination || "";
     document.getElementById("startInput").value = state.startDate || "";
     document.getElementById("endInput").value   = state.endDate || "";
+    document.getElementById("laundryToggle").checked = !!state.laundry;
     applyDateLimits();
     refreshContinue();
   }
@@ -1993,6 +2088,7 @@
   document.getElementById("destInput").value  = state.destination || "";
   document.getElementById("startInput").value = state.startDate || "";
   document.getElementById("endInput").value   = state.endDate || "";
+  document.getElementById("laundryToggle").checked = !!state.laundry;
   applyDateLimits();
   refreshContinue();
   renderSavedTrips();
